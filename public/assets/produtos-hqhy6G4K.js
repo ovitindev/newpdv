@@ -1,0 +1,1 @@
+var e=[{value:``,label:`Todos os status`},{value:`ativo`,label:`Ativo`},{value:`inativo`,label:`Inativo`}],t=[{value:``,label:`Todo o estoque`},{value:`disponivel`,label:`Disponível`},{value:`baixo`,label:`Estoque baixo (< 10)`},{value:`esgotado`,label:`Sem estoque`}];export{t as n,e as t};

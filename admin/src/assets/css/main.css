@@ -1,0 +1,145 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  /* Identidade NovaPDV */
+  --color-brand-950: #0a3d1e;
+  --color-brand-900: #0d4a25;
+  --color-brand-800: #0f5a2c;
+  --color-brand-700: #127034;
+  --color-brand-600: #149338;
+  --color-brand-500: #16c43f;
+  --color-brand-400: #3dd35c;
+  --color-brand-300: #84f03a;
+  --color-brand-200: #b9f593;
+  --color-brand-100: #ddfad0;
+  --color-brand-50: #f1fdf2;
+
+  --color-ink: #333333;
+  --color-ink-soft: #6b7573;
+  --color-ink-faint: #8f9895;
+
+  --color-surface: #f3f5f4;
+  --color-surface-alt: #eaede9;
+  --color-border: #e3e7e3;
+
+  --color-warning: #f5a623;
+  --color-warning-soft: #fdf1dd;
+  --color-danger: #e5484d;
+  --color-danger-soft: #fce7e7;
+  --color-info: #3b82f6;
+  --color-info-soft: #e6f0fe;
+
+  --font-sans: 'Poppins', ui-sans-serif, system-ui, -apple-system, sans-serif;
+
+  --shadow-soft: 0 1px 2px rgba(10, 61, 30, 0.04), 0 6px 20px -8px rgba(10, 61, 30, 0.12);
+  --shadow-soft-lg: 0 4px 8px rgba(10, 61, 30, 0.04), 0 16px 40px -12px rgba(10, 61, 30, 0.16);
+  --shadow-inner-soft: inset 0 0 0 1px rgba(10, 61, 30, 0.06);
+
+  --radius-card: 16px;
+  --radius-control: 10px;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--color-ink);
+  background-color: var(--color-surface);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+#app {
+  min-height: 100%;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-brand-200) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--color-brand-200);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-brand-400);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@layer components {
+  .card-surface {
+    background-color: #fff;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-soft);
+  }
+
+  .focus-ring {
+    @apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.25s ease-out;
+}
+
+@keyframes skeleton-pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-skeleton {
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .print-area,
+  .print-area * {
+    visibility: visible;
+  }
+
+  .print-area {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+  }
+}

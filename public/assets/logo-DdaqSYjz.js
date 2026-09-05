@@ -1,0 +1,1 @@
+var e=`/assets/logo-B1S9zYvR.png`;export{e as t};

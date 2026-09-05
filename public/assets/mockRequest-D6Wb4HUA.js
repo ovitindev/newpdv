@@ -1,0 +1,1 @@
+function e(e,{delay:t=350,fail:n=!1,errorMessage:r=`Falha ao carregar dados.`}={}){return new Promise((i,a)=>{setTimeout(()=>{if(n){a(Error(r));return}i(typeof e==`function`?e():e)},t)})}export{e as t};

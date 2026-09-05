@@ -1,0 +1,1 @@
+import{n as e}from"./pinia-DeWWHOqR.js";import{r as t}from"./empresa-BZQFTJik.js";var n=e(`empresa`,{state:()=>({dados:{...t},logoUrl:null}),actions:{atualizar(e){this.dados={...this.dados,...e}},setLogo(e){this.logoUrl=e}}});export{n as t};

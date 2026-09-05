@@ -1,0 +1,130 @@
+export const dashboardStats = [
+  {
+    key: 'vendas-hoje',
+    label: 'Vendas hoje',
+    value: 8570,
+    type: 'currency',
+    change: 12.5,
+    icon: 'Wallet',
+  },
+  {
+    key: 'vendas-realizadas',
+    label: 'Vendas realizadas',
+    value: 246,
+    type: 'number',
+    change: 4.7,
+    icon: 'ShoppingCart',
+  },
+  {
+    key: 'ticket-medio',
+    label: 'Ticket médio',
+    value: 35,
+    type: 'currency',
+    change: 5.1,
+    icon: 'Receipt',
+  },
+  {
+    key: 'produtos-vendidos',
+    label: 'Produtos vendidos',
+    value: 428,
+    type: 'number',
+    change: 8.2,
+    icon: 'Package',
+  },
+]
+
+export const salesByPeriod = {
+  labels: ['24/08', '25/08', '26/08', '27/08', '28/08', '29/08', '30/08'],
+  values: [4200, 5100, 4800, 6300, 5900, 7400, 8570],
+}
+
+export const paymentMethodsBreakdown = [
+  { label: 'PIX', value: 42, color: 'var(--color-brand-500)' },
+  { label: 'Crédito', value: 28, color: 'var(--color-brand-700)' },
+  { label: 'Débito', value: 18, color: 'var(--color-brand-300)' },
+  { label: 'Dinheiro', value: 12, color: '#c7d1cb' },
+]
+
+export const topSellingProducts = [
+  { id: 1, name: 'Coca-Cola 2L', sales: 184, revenue: 1656, share: 100 },
+  { id: 2, name: 'Arroz Tio João 5kg', sales: 152, revenue: 3496, share: 82 },
+  { id: 3, name: 'Detergente Ypê', sales: 138, revenue: 414, share: 75 },
+  { id: 4, name: 'Café Pilão 500g', sales: 121, revenue: 1815, share: 66 },
+  { id: 5, name: 'Sabonete Dove', sales: 97, revenue: 388, share: 53 },
+]
+
+export const revenueComparison = {
+  labels: ['Hoje', 'Semana', 'Mês'],
+  values: [8570, 42350, 168420],
+}
+
+export const recentActivity = [
+  {
+    id: 1,
+    type: 'sale',
+    title: 'Venda #1048',
+    amount: 320,
+    method: 'PIX',
+    minutesAgo: 2,
+  },
+  {
+    id: 2,
+    type: 'sale',
+    title: 'Venda #1047',
+    amount: 150,
+    method: 'Cartão de Crédito',
+    minutesAgo: 8,
+  },
+  {
+    id: 3,
+    type: 'sale',
+    title: 'Venda #1046',
+    amount: 890,
+    method: 'PIX',
+    minutesAgo: 15,
+  },
+  {
+    id: 4,
+    type: 'product',
+    title: 'Produto adicionado',
+    detail: 'iPhone 15',
+    minutesAgo: 32,
+  },
+  {
+    id: 5,
+    type: 'return',
+    title: 'Devolução #0032',
+    amount: 79.9,
+    method: 'Débito',
+    minutesAgo: 58,
+  },
+  {
+    id: 6,
+    type: 'sale',
+    title: 'Venda #1045',
+    amount: 210,
+    method: 'Dinheiro',
+    minutesAgo: 74,
+  },
+]
+
+export const fiscalStatus = [
+  { key: 'nfce', label: 'NFC-e', status: 'ok', detail: 'Operacional' },
+  { key: 'nfe', label: 'NF-e', status: 'ok', detail: 'Operacional' },
+  { key: 'sefaz', label: 'SEFAZ', status: 'ok', detail: 'Conectado' },
+  { key: 'certificado', label: 'Certificado A1', status: 'ok', detail: 'Válido até 12/04/2027' },
+]
+
+export const stockSummary = {
+  inStock: 1248,
+  lowStock: 23,
+  outOfStock: 7,
+}
+
+export const stockTopProducts = [
+  { id: 1, name: 'Coca-Cola 2L', sales: 184, stock: 96 },
+  { id: 2, name: 'Arroz Tio João 5kg', sales: 152, stock: 41 },
+  { id: 3, name: 'Detergente Ypê', sales: 138, stock: 8 },
+  { id: 4, name: 'Café Pilão 500g', sales: 121, stock: 63 },
+  { id: 5, name: 'Sabonete Dove', sales: 97, stock: 0 },
+]

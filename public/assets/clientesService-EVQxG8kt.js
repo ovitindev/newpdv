@@ -1,0 +1,1 @@
+import{t as e}from"./http-BKCNeh0X.js";function t(){return e.get(`/clientes`)}function n(t){return e.post(`/clientes`,t)}function r(t,n){return e.put(`/clientes/${t}`,n)}function i(t){return e.delete(`/clientes/${t}`)}export{r as i,i as n,t as r,n as t};

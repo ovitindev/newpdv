@@ -1,0 +1,100 @@
+services:
+  app:
+    build:
+      context: ./docker/php
+    container_name: pdvloja_app
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html
+    environment:
+      - APP_ENV=${APP_ENV:-local}
+    depends_on:
+      - db
+      - redis
+    networks:
+      - pdvloja
+
+  webserver:
+    image: nginx:alpine
+    container_name: pdvloja_webserver
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8080}:80"
+    volumes:
+      - ./:/var/www/html
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - app
+    networks:
+      - pdvloja
+
+  db:
+    image: mariadb:11
+    container_name: pdvloja_db
+    restart: unless-stopped
+    ports:
+      - "${FORWARD_DB_PORT:-3307}:3306"
+    environment:
+      - MARIADB_ROOT_PASSWORD=${DB_ROOT_PASSWORD:-root}
+      - MARIADB_DATABASE=${DB_DATABASE:-pdvloja}
+      - MARIADB_USER=${DB_USERNAME:-pdvloja}
+      - MARIADB_PASSWORD=${DB_PASSWORD:-pdvloja}
+    volumes:
+      - pdvloja_db_data:/var/lib/mysql
+    networks:
+      - pdvloja
+
+  redis:
+    image: redis:alpine
+    container_name: pdvloja_redis
+    restart: unless-stopped
+    ports:
+      - "${FORWARD_REDIS_PORT:-6380}:6379"
+    networks:
+      - pdvloja
+
+  mailpit:
+    image: axllent/mailpit
+    container_name: pdvloja_mailpit
+    restart: unless-stopped
+    ports:
+      - "${FORWARD_MAILPIT_PORT:-8025}:8025"
+      - "1025:1025"
+    networks:
+      - pdvloja
+
+  adminer:
+    image: adminer
+    container_name: pdvloja_adminer
+    restart: unless-stopped
+    ports:
+      - "${FORWARD_ADMINER_PORT:-8081}:8080"
+    depends_on:
+      - db
+    networks:
+      - pdvloja
+
+  frontend:
+    image: node:20-alpine
+    container_name: pdvloja_frontend
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - ./admin:/app
+      - pdvloja_admin_node_modules:/app/node_modules
+    command: sh -c "npm install && npm run dev"
+    ports:
+      - "${FORWARD_FRONTEND_PORT:-5180}:5180"
+    networks:
+      - pdvloja
+
+networks:
+  pdvloja:
+    driver: bridge
+
+volumes:
+  pdvloja_db_data:
+    driver: local
+  pdvloja_admin_node_modules:
+    driver: local
