@@ -38,21 +38,62 @@
 
 ## Rodando em desenvolvimento (Docker)
 
-Pré-requisitos: Docker e Docker Compose.
+Pré-requisitos: [Docker](https://docs.docker.com/get-docker/) e Docker Compose (já vem junto no Docker Desktop) instalados e rodando. Não precisa ter PHP, Composer, Node nem MariaDB instalados na máquina — tudo isso roda dentro dos containers.
+
+**1. Clonar o repositório**
+
+```bash
+git clone https://github.com/ovitindev/newpdv.git
+cd newpdv
+```
+
+**2. Criar o arquivo de ambiente**
 
 ```bash
 cp .env.example .env
+```
+
+O `.env.example` já vem com valores padrão que funcionam de primeira em dev (banco, portas, etc.) — não precisa editar nada pra rodar localmente.
+
+**3. Subir os containers**
+
+```bash
 docker compose up -d --build
+```
+
+Isso builda a imagem do PHP e sobe: `app` (PHP-FPM), `webserver` (Nginx), `db` (MariaDB), `redis`, `mailpit`, `adminer` e `frontend` (Vite dev server do painel). Na primeira vez pode demorar alguns minutos (build da imagem + `npm install` do painel). Acompanhe com:
+
+```bash
+docker compose logs -f
+```
+
+**4. Gerar a chave da aplicação**
+
+```bash
 docker compose exec app php artisan key:generate
+```
+
+**5. Rodar as migrations (criar as tabelas)**
+
+```bash
 docker compose exec app php artisan migrate
+```
+
+**6. Rodar o seeder (criar a empresa e o usuário admin)**
+
+```bash
 docker compose exec app php artisan db:seed
 ```
 
-O `db:seed` cria a empresa padrão e o usuário administrador inicial (veja as credenciais em [`DEPLOY.md`](./DEPLOY.md)).
+Isso cria a empresa padrão e o usuário administrador inicial (veja as credenciais em [`DEPLOY.md`](./DEPLOY.md)). É idempotente — pode rodar de novo sem duplicar nada.
 
 > Troque a senha padrão assim que possível — ainda não há tela pronta para isso no painel, mas pode ser alterada direto no banco (tabela `users`).
 
-Serviços expostos (portas padrão, ajustáveis no `.env`):
+**7. Acessar**
+
+Abra **http://localhost:8090** no navegador — deve aparecer a tela de login do NovaPDV.
+
+Demais serviços expostos (portas padrão, ajustáveis no `.env`):
 
 | Serviço          | URL                                            |
 | ---------------- | ----------------------------------------------- |
@@ -61,19 +102,37 @@ Serviços expostos (portas padrão, ajustáveis no `.env`):
 | Adminer          | http://localhost:8081 (`FORWARD_ADMINER_PORT`)   |
 | Mailpit          | http://localhost:8025 (`FORWARD_MAILPIT_PORT`)   |
 
-O container `frontend` já roda `npm install && npm run dev` para o painel Vue. Para buildar os assets do backend (Blade/Vite), rode `npm install && npm run dev` (ou `build`) na raiz do projeto quando necessário.
+O container `frontend` já roda `npm install && npm run dev` para o painel Vue automaticamente. Para buildar os assets do backend (Blade/Vite), rode `npm install && npm run dev` (ou `build`) na raiz do projeto quando necessário.
+
+**Para parar tudo:**
+
+```bash
+docker compose down          # para os containers (mantém os dados do banco)
+docker compose down -v       # para e APAGA os dados do banco (volume)
+```
 
 ## Rodando sem Docker
 
+Pré-requisitos: PHP 8.3+, Composer, Node.js, e um MySQL/MariaDB rodando na sua máquina.
+
 ```bash
+git clone https://github.com/ovitindev/newpdv.git
+cd newpdv
+
 composer install
 cp .env.example .env
 php artisan key:generate
-# ajuste DB_* no .env para seu MySQL/MariaDB local
-php artisan migrate --seed
-npm install && npm run build   # assets do backend
-cd admin && npm install && npm run dev   # painel Vue
+
+# edite o .env: DB_HOST, DB_DATABASE, DB_USERNAME, DB_PASSWORD
+# apontando para o seu MySQL/MariaDB local (crie o banco antes, se preciso)
+
+php artisan migrate --seed   # cria as tabelas + empresa + usuário admin
+
+npm install && npm run build          # assets do backend (Blade/Vite)
+cd admin && npm install && npm run dev   # painel Vue (roda separado, em outro terminal)
 ```
+
+Depois, sirva a aplicação Laravel com `php artisan serve` (ou configure Nginx/Apache apontando para `public/`).
 
 ## Testes
 
