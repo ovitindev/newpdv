@@ -22,9 +22,11 @@ cp .env.production.example .env
 ```
 
 Edite o `.env` e ajuste:
-- `APP_URL` → `http://SEU_DOMINIO_OU_IP` (ou `https://...` se já tiver certificado)
+- `APP_URL` → `http://SEU_DOMINIO_OU_IP:APP_PORT` (ou `https://...` se já tiver certificado e proxy na frente)
 - `DB_PASSWORD` e `DB_ROOT_PASSWORD` → senhas fortes (troque os placeholders `TROQUE_ESTA_SENHA...`)
-- `APP_PORT` → porta pública (padrão 80; use outra se já tiver algo rodando nela)
+- `APP_PORT` → porta pública do Nginx. O exemplo já vem com uma porta alta pouco usada (`47281`) para evitar conflito com outras aplicações do servidor, mas confira antes se ela está livre: `sudo ss -ltnp | grep 47281`. Se preferir, escolha outra porta alta (acima de 10000) que não apareça na saída de `sudo ss -ltnp`.
+
+> `db` (MariaDB) e `redis` **não** expõem porta nenhuma para fora do servidor no `docker-compose.prod.yml` — só são acessíveis entre os containers pela rede interna `pdvloja`. Só o Nginx (`webserver`) fica exposto, então é a única porta com risco de conflito.
 
 Gere a chave da aplicação (não reaproveite a de desenvolvimento):
 
@@ -64,7 +66,7 @@ Rode as migrations por garantia (não deve mudar nada, é só uma checagem de si
 docker compose -f docker-compose.prod.yml exec app php artisan migrate --force
 ```
 
-Acesse `http://SEU_DOMINIO_OU_IP` no navegador — deve abrir a tela de login do NovaPDV.
+Acesse `http://SEU_DOMINIO_OU_IP:APP_PORT` no navegador (a porta que você definiu no `.env`) — deve abrir a tela de login do NovaPDV.
 
 ## 7. IMPORTANTE — troque a senha do admin
 A senha `@@123admin` é a mesma usada no ambiente de desenvolvimento. **Assim que logar pela primeira vez em produção, troque essa senha** (ainda não existe uma tela pronta para isso no painel — me avise que eu faço rapidinho, ou troque direto no banco por enquanto).

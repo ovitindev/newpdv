@@ -20,7 +20,7 @@ services:
     container_name: pdvloja_webserver
     restart: unless-stopped
     ports:
-      - "${APP_PORT:-80}:80"
+      - "${APP_PORT:-47281}:80"
     volumes:
       - ./:/var/www/html
       - ./docker/nginx/prod.conf:/etc/nginx/conf.d/default.conf
