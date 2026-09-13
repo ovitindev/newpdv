@@ -1,58 +1,84 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# NovaPDV
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Sistema de PDV (ponto de venda) e gestão de loja: vendas, estoque, financeiro, fiscal (NFC-e/NF-e) e relatórios, multiempresa.
 
-## About Laravel
+- **Backend/API:** Laravel 13 (PHP 8.3)
+- **Painel (frontend):** Vue 3 + Vite + Tailwind CSS (pasta `admin/`)
+- **Banco de dados:** MariaDB 11
+- **Cache/Fila/Sessão:** Redis
+- **Infra local:** Docker Compose
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Módulos
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- **PDV** — nova venda, histórico de vendas, devoluções
+- **Produtos** — cadastro, categorias, marcas, estoque, movimentações
+- **Clientes** e **Fornecedores**
+- **Financeiro** — contas a pagar/receber, fluxo de caixa
+- **Fiscal** — NFC-e, NF-e, notas emitidas/canceladas, contingência
+- **Relatórios** — vendas, produtos, estoque, financeiro, fiscal
+- **Configurações** — empresa, usuários, vendedores, permissões, certificado A1, configurações fiscais
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+> Algumas telas listadas acima ainda são apenas demonstração (dados mockados no frontend) e a emissão fiscal via NFePHP ainda não está integrada. Consulte o histórico do projeto para o status atualizado de cada módulo.
 
-## Learning Laravel
+## Rodando em desenvolvimento (Docker)
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+Pré-requisitos: Docker e Docker Compose.
 
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+cp .env.example .env
+docker compose up -d --build
+docker compose exec app php artisan key:generate
+docker compose exec app php artisan migrate
+docker compose exec app php artisan db:seed
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+O `db:seed` cria a empresa padrão e o usuário administrador inicial (veja as credenciais em [`DEPLOY.md`](./DEPLOY.md)).
 
-## Contributing
+> Troque a senha padrão assim que possível — ainda não há tela pronta para isso no painel, mas pode ser alterada direto no banco (tabela `users`).
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Serviços expostos (portas padrão, ajustáveis no `.env`):
 
-## Code of Conduct
+| Serviço          | URL                                            |
+| ---------------- | ----------------------------------------------- |
+| Aplicação (Nginx)| http://localhost:8090 (`APP_PORT`)               |
+| Painel (Vite dev)| http://localhost:5180 (`FORWARD_FRONTEND_PORT`)  |
+| Adminer          | http://localhost:8081 (`FORWARD_ADMINER_PORT`)   |
+| Mailpit          | http://localhost:8025 (`FORWARD_MAILPIT_PORT`)   |
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+O container `frontend` já roda `npm install && npm run dev` para o painel Vue. Para buildar os assets do backend (Blade/Vite), rode `npm install && npm run dev` (ou `build`) na raiz do projeto quando necessário.
 
-## Security Vulnerabilities
+## Rodando sem Docker
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+```bash
+composer install
+cp .env.example .env
+php artisan key:generate
+# ajuste DB_* no .env para seu MySQL/MariaDB local
+php artisan migrate --seed
+npm install && npm run build   # assets do backend
+cd admin && npm install && npm run dev   # painel Vue
+```
 
-## License
+## Testes
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+```bash
+composer test
+# ou
+php artisan test
+```
+
+## Deploy em produção
+
+Veja [`DEPLOY.md`](./DEPLOY.md) — inclui `docker-compose.prod.yml`, build do painel para produção e o dump inicial do banco (`deploy/pdvloja_dump_inicial.sql`, útil apenas quando as tabelas ainda não existem; se já rodou `migrate`, prefira `php artisan db:seed`).
+
+## Estrutura do projeto
+
+```
+app/            Modelos, lógica de domínio (Laravel)
+routes/         Rotas web/api/console
+database/       Migrations, factories e seeders
+admin/          Painel administrativo (Vue 3 + Vite)
+docker/         Dockerfiles e configs (PHP, Nginx)
+deploy/         Scripts e dump SQL para deploy em produção
+tests/          Testes automatizados (PHPUnit)
+```
