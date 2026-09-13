@@ -102,7 +102,7 @@ Demais serviços expostos (portas padrão, ajustáveis no `.env`):
 | Adminer          | http://localhost:8081 (`FORWARD_ADMINER_PORT`)   |
 | Mailpit          | http://localhost:8025 (`FORWARD_MAILPIT_PORT`)   |
 
-O container `frontend` já roda `npm install && npm run dev` para o painel Vue automaticamente. Para buildar os assets do backend (Blade/Vite), rode `npm install && npm run dev` (ou `build`) na raiz do projeto quando necessário.
+O container `frontend` já roda `npm install && npm run dev` para o painel Vue automaticamente, e o Vite já vem configurado (`admin/vite.config.js`) para encaminhar as chamadas `/api` para o container `webserver` — então o painel em http://localhost:5180 conversa com o backend certinho sem precisar criar nenhum `.env` na mão. Para buildar os assets do backend (Blade/Vite), rode `npm install && npm run dev` (ou `build`) na raiz do projeto quando necessário.
 
 **Para parar tudo:**
 
@@ -133,6 +133,12 @@ cd admin && npm install && npm run dev   # painel Vue (roda separado, em outro t
 ```
 
 Depois, sirva a aplicação Laravel com `php artisan serve` (ou configure Nginx/Apache apontando para `public/`).
+
+> Fora do Docker não existe a rede interna com o container `webserver`, então o proxy padrão do Vite (`admin/vite.config.js`) não vai achar o backend. Crie `admin/.env.local` apontando para onde o Laravel está rodando, por exemplo:
+> ```
+> VITE_API_PROXY_TARGET=http://localhost:8000
+> ```
+> (ajuste a porta para a que o `php artisan serve` (ou seu Nginx/Apache local) estiver usando).
 
 ## Testes
 
