@@ -1,7 +1,7 @@
 import { http } from '@/services/http'
 import { mockRequest } from '@/utils/mockRequest'
 import { usuarios, perfis } from '@/data/mock/usuarios'
-import { empresa, certificadoA1, configFiscal } from '@/data/mock/empresa'
+import { certificadoA1, configFiscal } from '@/data/mock/empresa'
 
 export function getUsuarios() {
   return mockRequest(usuarios)
@@ -28,7 +28,11 @@ export function getPerfis() {
 }
 
 export function getEmpresa() {
-  return mockRequest(empresa)
+  return http.get('/empresa')
+}
+
+export function updateEmpresa(payload) {
+  return http.put('/empresa', payload)
 }
 
 export function getCertificadoA1() {

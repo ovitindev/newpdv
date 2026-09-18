@@ -12,6 +12,10 @@ export function getVendas({ vendedorId, dataInicio, dataFim } = {}) {
   })
 }
 
+export function getVenda(id) {
+  return http.get(`/vendas/${id}`)
+}
+
 export function createVenda(payload) {
   return http.post('/vendas', payload)
 }

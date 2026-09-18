@@ -1,11 +1,16 @@
 <script setup>
+import { onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { useEmpresaStore } from '@/stores/empresa'
 import { useUiStore } from '@/stores/ui'
 import Sidebar from '@/components/layout/Sidebar.vue'
 import Header from '@/components/layout/Header.vue'
 
 const route = useRoute()
 const uiStore = useUiStore()
+const empresaStore = useEmpresaStore()
+
+onMounted(() => empresaStore.carregar())
 </script>
 
 <template>

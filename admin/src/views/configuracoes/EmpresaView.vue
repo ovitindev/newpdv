@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { Building2, Save, UploadCloud, Trash2 } from '@lucide/vue'
 import { useEmpresaStore } from '@/stores/empresa'
 import { useToastStore } from '@/stores/toast'
@@ -12,6 +12,13 @@ const toast = useToastStore()
 const empresaStore = useEmpresaStore()
 
 const form = ref({ ...empresaStore.dados, endereco: { ...empresaStore.dados.endereco } })
+
+watch(
+  () => empresaStore.dados,
+  (dados) => {
+    form.value = { ...dados, endereco: { ...dados.endereco } }
+  },
+)
 const logoInput = ref(null)
 
 const regimeOptions = [
@@ -32,9 +39,13 @@ function removeLogo() {
   empresaStore.setLogo(null)
 }
 
-function submit() {
-  empresaStore.atualizar(form.value)
-  toast.success('Dados da empresa atualizados', 'As informações serão usadas em notas e recibos.')
+async function submit() {
+  try {
+    await empresaStore.atualizar(form.value)
+    toast.success('Dados da empresa atualizados', 'As informações serão usadas em notas e recibos.')
+  } catch (error) {
+    toast.error('Não foi possível salvar', error.message)
+  }
 }
 </script>
 

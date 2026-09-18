@@ -51,8 +51,8 @@ const sizeClasses = { sm: 'max-w-sm', md: 'max-w-lg', lg: 'max-w-2xl' }
           leave-from-class="opacity-100 scale-100"
           leave-to-class="opacity-0 scale-95"
         >
-          <div v-if="modelValue" class="w-full rounded-2xl bg-white shadow-soft-lg" :class="sizeClasses[size]" role="dialog" aria-modal="true">
-            <header v-if="title || $slots.header" class="flex items-center justify-between gap-4 border-b border-border px-6 py-4">
+          <div v-if="modelValue" class="flex max-h-[calc(100dvh-2rem)] w-full flex-col rounded-2xl bg-white shadow-soft-lg" :class="sizeClasses[size]" role="dialog" aria-modal="true">
+            <header v-if="title || $slots.header" class="flex shrink-0 items-center justify-between gap-4 border-b border-border px-6 py-4">
               <slot name="header">
                 <h3 class="text-base font-semibold text-ink">{{ title }}</h3>
               </slot>
@@ -65,10 +65,10 @@ const sizeClasses = { sm: 'max-w-sm', md: 'max-w-lg', lg: 'max-w-2xl' }
                 <X :size="16" />
               </button>
             </header>
-            <div class="px-6 py-5">
+            <div class="min-h-0 flex-1 overflow-y-auto px-6 py-5">
               <slot />
             </div>
-            <footer v-if="$slots.footer" class="flex items-center justify-end gap-3 border-t border-border px-6 py-4">
+            <footer v-if="$slots.footer" class="flex shrink-0 items-center justify-end gap-3 border-t border-border px-6 py-4">
               <slot name="footer" />
             </footer>
           </div>

@@ -2,7 +2,9 @@
 import { computed, onMounted, ref } from 'vue'
 import { Eye, Printer, Plus } from '@lucide/vue'
 import { useRouter } from 'vue-router'
-import { getVendas } from '@/services/vendasService'
+import { useToastStore } from '@/stores/toast'
+import ReciboVenda from '@/components/pdv/ReciboVenda.vue'
+import { getVenda, getVendas } from '@/services/vendasService'
 import { usePagination } from '@/utils/usePagination'
 import Card from '@/components/ui/Card.vue'
 import Table from '@/components/ui/Table.vue'
@@ -15,6 +17,7 @@ import Modal from '@/components/ui/Modal.vue'
 import { formatCurrency, formatDateTime } from '@/utils/format'
 
 const router = useRouter()
+const toast = useToastStore()
 const loading = ref(true)
 const vendas = ref([])
 const search = ref('')
@@ -59,6 +62,38 @@ const selectedVenda = ref(null)
 function openDetail(venda) {
   selectedVenda.value = venda
 }
+
+function imprimir() {
+  window.print()
+}
+
+const reciboVenda = ref(null)
+const carregandoRecibo = ref(false)
+
+async function reimprimirRecibo(venda) {
+  if (carregandoRecibo.value) return
+  carregandoRecibo.value = true
+  try {
+    const d = await getVenda(venda.id)
+    reciboVenda.value = {
+      id: d.id,
+      data: d.data,
+      itens: d.itensDetalhe,
+      subtotal: d.subtotal,
+      discountPercent: d.descontoPercent,
+      discountValue: d.descontoValor,
+      total: d.total,
+      cliente: d.cliente === 'Consumidor Final' ? null : { nome: d.cliente },
+      vendedor: d.vendedor ? { nome: d.vendedor } : null,
+      payments: d.pagamentos.map((p) => ({ id: p.id, method: p.metodo, valor: p.valor, parcelas: p.parcelas })),
+    }
+    selectedVenda.value = null
+  } catch (error) {
+    toast.error('Não foi possível carregar o recibo', error.message)
+  } finally {
+    carregandoRecibo.value = false
+  }
+}
 </script>
 
 <template>
@@ -100,7 +135,7 @@ function openDetail(venda) {
             <button class="flex size-8 items-center justify-center rounded-lg text-ink-faint hover:bg-surface hover:text-ink" @click="openDetail(row)">
               <Eye :size="15" />
             </button>
-            <button class="flex size-8 items-center justify-center rounded-lg text-ink-faint hover:bg-surface hover:text-ink">
+            <button class="flex size-8 items-center justify-center rounded-lg text-ink-faint hover:bg-surface hover:text-ink" title="Reimprimir recibo" @click="reimprimirRecibo(row)">
               <Printer :size="15" />
             </button>
           </div>
@@ -123,7 +158,15 @@ function openDetail(venda) {
       </dl>
       <template #footer>
         <Button variant="outline" @click="selectedVenda = null">Fechar</Button>
-        <Button><template #icon-left><Printer :size="15" /></template>Imprimir</Button>
+        <Button :loading="carregandoRecibo" @click="reimprimirRecibo(selectedVenda)"><template #icon-left><Printer :size="15" /></template>Reimprimir recibo</Button>
+      </template>
+    </Modal>
+
+    <Modal :model-value="Boolean(reciboVenda)" title="Recibo (sem valor fiscal)" size="md" @update:model-value="reciboVenda = null">
+      <ReciboVenda v-if="reciboVenda" :venda="reciboVenda" />
+      <template #footer>
+        <Button variant="outline" @click="reciboVenda = null">Fechar</Button>
+        <Button @click="imprimir()"><template #icon-left><Printer :size="15" /></template>Imprimir</Button>
       </template>
     </Modal>
   </div>

@@ -6,6 +6,7 @@ import { useToastStore } from '@/stores/toast'
 import Modal from '@/components/ui/Modal.vue'
 import Button from '@/components/ui/Button.vue'
 import Badge from '@/components/ui/Badge.vue'
+import ReciboVenda from '@/components/pdv/ReciboVenda.vue'
 import { formatCurrency, formatDateTime } from '@/utils/format'
 
 const props = defineProps({
@@ -144,23 +145,7 @@ function finish() {
     </div>
 
     <!-- Recibo -->
-    <div v-else-if="step === 'recibo' && venda" class="print-area space-y-4">
-      <div class="flex flex-col items-center gap-1.5 text-center">
-        <img v-if="empresaStore.logoUrl" :src="empresaStore.logoUrl" alt="Logo" class="h-10 w-auto" />
-        <p class="text-sm font-semibold text-ink">{{ empresaStore.dados.nomeFantasia }}</p>
-        <p class="text-xs text-ink-faint">{{ empresaStore.dados.cnpj }}</p>
-      </div>
-      <div class="rounded-xl border border-dashed border-border p-4 space-y-2 text-sm">
-        <div v-for="item in venda.itens" :key="item.id" class="flex justify-between">
-          <span class="text-ink-soft">{{ item.quantidade }}x {{ item.nome }}</span>
-          <span class="text-ink">{{ formatCurrency(item.preco * item.quantidade) }}</span>
-        </div>
-        <div class="pt-2 border-t border-border flex justify-between font-bold text-ink">
-          <span>Total</span><span>{{ formatCurrency(venda.total) }}</span>
-        </div>
-      </div>
-      <p class="text-[11px] text-ink-faint text-center uppercase tracking-wide">Este documento não possui valor fiscal</p>
-    </div>
+    <ReciboVenda v-else-if="step === 'recibo' && venda" :venda="venda" />
 
     <template #footer>
       <template v-if="step === 'nota-emitida'">
