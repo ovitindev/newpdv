@@ -147,7 +147,7 @@ onMounted(async () => {
         <ul v-else class="space-y-1">
           <li v-for="item in data.fiscalStatus" :key="item.key" class="flex items-center justify-between py-2">
             <span class="text-sm text-ink-soft">{{ item.label }}</span>
-            <Badge variant="success" dot>{{ item.detail }}</Badge>
+            <Badge :variant="item.variant" dot>{{ item.detail }}</Badge>
           </li>
         </ul>
       </Card>

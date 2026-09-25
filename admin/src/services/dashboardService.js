@@ -1,26 +1,5 @@
-import { mockRequest } from '@/utils/mockRequest'
-import {
-  dashboardStats,
-  salesByPeriod,
-  paymentMethodsBreakdown,
-  topSellingProducts,
-  revenueComparison,
-  recentActivity,
-  fiscalStatus,
-  stockSummary,
-  stockTopProducts,
-} from '@/data/mock/dashboard'
+import { http } from '@/services/http'
 
 export function getDashboardOverview() {
-  return mockRequest({
-    stats: dashboardStats,
-    salesByPeriod,
-    paymentMethodsBreakdown,
-    topSellingProducts,
-    revenueComparison,
-    recentActivity,
-    fiscalStatus,
-    stockSummary,
-    stockTopProducts,
-  })
+  return http.get('/dashboard')
 }

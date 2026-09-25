@@ -55,4 +55,9 @@ class Venda extends Model
     {
         return $this->hasMany(NotaFiscal::class);
     }
+
+    public function scopeConcluidas($query)
+    {
+        return $query->where('status', 'concluida');
+    }
 }

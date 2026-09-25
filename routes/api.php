@@ -7,6 +7,7 @@ use App\Http\Controllers\ClienteController;
 use App\Http\Controllers\ConfigFiscalController;
 use App\Http\Controllers\ContaPagarController;
 use App\Http\Controllers\ContaReceberController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DevolucaoController;
 use App\Http\Controllers\EmpresaController;
 use App\Http\Controllers\FornecedorController;
@@ -28,6 +29,8 @@ Route::middleware('throttle:6,1')->group(function () {
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
+
+    Route::get('/dashboard', [DashboardController::class, 'overview']);
 
     Route::get('/empresa', [EmpresaController::class, 'show']);
     Route::put('/empresa', [EmpresaController::class, 'update']);
