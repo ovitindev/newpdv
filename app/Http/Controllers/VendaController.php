@@ -29,6 +29,8 @@ class VendaController extends Controller
             'cliente_id' => ['nullable', 'exists:clientes,id'],
             'vendedor_id' => ['required', 'exists:vendedores,id'],
             'desconto_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'entrega' => ['nullable', 'boolean'],
+            'valor_frete' => ['nullable', 'numeric', 'min:0'],
             'itens' => ['required', 'array', 'min:1'],
             'itens.*.produto_id' => ['nullable', 'exists:produtos,id'],
             'itens.*.nome' => ['required', 'string', 'max:255'],
@@ -45,7 +47,9 @@ class VendaController extends Controller
         $subtotal = collect($data['itens'])->sum(fn ($item) => $item['preco'] * $item['quantidade']);
         $descontoPercent = $data['desconto_percent'] ?? 0;
         $descontoValor = round($subtotal * ($descontoPercent / 100), 2);
-        $total = round($subtotal - $descontoValor, 2);
+        $entrega = (bool) ($data['entrega'] ?? false);
+        $valorFrete = $entrega ? round($data['valor_frete'] ?? 0, 2) : 0;
+        $total = round($subtotal - $descontoValor + $valorFrete, 2);
 
         $totalPago = round(collect($data['pagamentos'])->sum('valor'), 2);
         if (abs($totalPago - $total) > 0.02) {
@@ -54,7 +58,7 @@ class VendaController extends Controller
             ], 422);
         }
 
-        $venda = DB::transaction(function () use ($data, $request, $subtotal, $descontoPercent, $descontoValor, $total) {
+        $venda = DB::transaction(function () use ($data, $request, $subtotal, $descontoPercent, $descontoValor, $entrega, $valorFrete, $total) {
             $venda = Venda::create([
                 'cliente_id' => $data['cliente_id'] ?? null,
                 'vendedor_id' => $data['vendedor_id'],
@@ -62,6 +66,8 @@ class VendaController extends Controller
                 'subtotal' => $subtotal,
                 'desconto_percent' => $descontoPercent,
                 'desconto_valor' => $descontoValor,
+                'entrega' => $entrega,
+                'valor_frete' => $valorFrete,
                 'total' => $total,
                 'status' => 'concluida',
             ]);
@@ -118,12 +124,34 @@ class VendaController extends Controller
     public function update(Request $request, Venda $venda)
     {
         $data = $request->validate([
+            'cliente_id' => ['nullable', 'exists:clientes,id'],
+            'vendedor_id' => ['required', 'exists:vendedores,id'],
+            'desconto_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'entrega' => ['nullable', 'boolean'],
+            'valor_frete' => ['nullable', 'numeric', 'min:0'],
             'status' => ['required', 'in:concluida,cancelada'],
         ]);
 
-        $venda->update($data);
+        // Itens e pagamentos da venda não são editáveis aqui — só os dados
+        // de cabeçalho. O subtotal (soma dos itens) permanece o mesmo.
+        $descontoPercent = $data['desconto_percent'] ?? 0;
+        $descontoValor = round((float) $venda->subtotal * ($descontoPercent / 100), 2);
+        $entrega = (bool) ($data['entrega'] ?? false);
+        $valorFrete = $entrega ? round($data['valor_frete'] ?? 0, 2) : 0;
+        $total = round((float) $venda->subtotal - $descontoValor + $valorFrete, 2);
 
-        return $this->presentSummary($venda->load(['cliente', 'vendedor', 'itens', 'pagamentos']));
+        $venda->update([
+            'cliente_id' => $data['cliente_id'] ?? null,
+            'vendedor_id' => $data['vendedor_id'],
+            'desconto_percent' => $descontoPercent,
+            'desconto_valor' => $descontoValor,
+            'entrega' => $entrega,
+            'valor_frete' => $valorFrete,
+            'total' => $total,
+            'status' => $data['status'],
+        ]);
+
+        return $this->presentDetail($venda->load(['cliente', 'vendedor', 'itens', 'pagamentos', 'operador']));
     }
 
     private function presentSummary(Venda $venda): array
@@ -137,6 +165,8 @@ class VendaController extends Controller
             'pagamento' => $this->paymentSummaryLabel($venda),
             'data' => $venda->created_at,
             'status' => $venda->status,
+            'entrega' => (bool) $venda->entrega,
+            'valorFrete' => (float) $venda->valor_frete,
         ];
     }
 
@@ -144,6 +174,8 @@ class VendaController extends Controller
     {
         return [
             ...$this->presentSummary($venda),
+            'clienteId' => $venda->cliente_id,
+            'vendedorId' => $venda->vendedor_id,
             'subtotal' => (float) $venda->subtotal,
             'descontoPercent' => (float) $venda->desconto_percent,
             'descontoValor' => (float) $venda->desconto_valor,

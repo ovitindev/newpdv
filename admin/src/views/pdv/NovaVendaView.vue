@@ -13,6 +13,7 @@ import {
   PackagePlus,
   SearchX,
   CornerDownLeft,
+  Truck,
 } from '@lucide/vue'
 import { getProdutos } from '@/services/produtosService'
 import { getClientes, createCliente } from '@/services/clientesService'
@@ -25,6 +26,7 @@ import Badge from '@/components/ui/Badge.vue'
 import Modal from '@/components/ui/Modal.vue'
 import Input from '@/components/ui/Input.vue'
 import MoneyInput from '@/components/ui/MoneyInput.vue'
+import Switch from '@/components/ui/Switch.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import PaymentModal from '@/components/pdv/PaymentModal.vue'
 import VendaConcluidaModal from '@/components/pdv/VendaConcluidaModal.vue'
@@ -179,6 +181,8 @@ async function handlePagamentoConfirmado() {
       cliente_id: cart.cliente?.id ?? null,
       vendedor_id: cart.vendedor.id,
       desconto_percent: cart.discountPercent,
+      entrega: cart.entrega,
+      valor_frete: cart.freteValue,
       itens: itensVendidos.map((item) => ({
         produto_id: item.avulso ? null : item.id,
         nome: item.nome,
@@ -201,6 +205,8 @@ async function handlePagamentoConfirmado() {
       subtotal: venda.subtotal,
       discountPercent: venda.descontoPercent,
       discountValue: venda.descontoValor,
+      entrega: venda.entrega,
+      valorFrete: venda.valorFrete,
       total: venda.total,
       cliente: cart.cliente,
       vendedor: cart.vendedor,
@@ -409,6 +415,19 @@ function handleFinish() {
           </div>
         </div>
 
+        <div class="flex items-center justify-between">
+          <label class="flex items-center gap-1.5 text-sm text-ink-soft">
+            <Truck :size="14" /> Entrega
+          </label>
+          <Switch :model-value="cart.entrega" @update:model-value="cart.setEntrega($event)" />
+        </div>
+        <MoneyInput
+          v-if="cart.entrega"
+          :model-value="cart.frete"
+          label="Valor do frete"
+          @update:model-value="cart.setFrete($event)"
+        />
+
         <div class="space-y-1.5 text-sm">
           <div class="flex items-center justify-between text-ink-soft">
             <span>Subtotal</span>
@@ -417,6 +436,10 @@ function handleFinish() {
           <div v-if="cart.discountPercent > 0" class="flex items-center justify-between text-danger">
             <span>Desconto ({{ cart.discountPercent }}%)</span>
             <span class="tabular-nums">- {{ formatCurrency(cart.discountValue) }}</span>
+          </div>
+          <div v-if="cart.freteValue > 0" class="flex items-center justify-between text-ink-soft">
+            <span>Frete</span>
+            <span class="tabular-nums">+ {{ formatCurrency(cart.freteValue) }}</span>
           </div>
           <div class="flex items-center justify-between pt-2 border-t border-border text-base font-bold text-ink">
             <span>Total</span>

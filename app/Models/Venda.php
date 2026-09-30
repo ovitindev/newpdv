@@ -14,6 +14,7 @@ class Venda extends Model
     protected $fillable = [
         'empresa_id', 'cliente_id', 'vendedor_id', 'user_id',
         'subtotal', 'desconto_percent', 'desconto_valor', 'total', 'status',
+        'entrega', 'valor_frete',
     ];
 
     protected function casts(): array
@@ -23,6 +24,8 @@ class Venda extends Model
             'desconto_percent' => 'decimal:2',
             'desconto_valor' => 'decimal:2',
             'total' => 'decimal:2',
+            'entrega' => 'boolean',
+            'valor_frete' => 'decimal:2',
         ];
     }
 

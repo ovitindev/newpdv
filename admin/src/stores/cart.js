@@ -8,6 +8,8 @@ export const useCartStore = defineStore('cart', {
     discountPercent: 0,
     cliente: null,
     vendedor: null,
+    entrega: false,
+    frete: 0,
     payments: [], // [{ id, method, valor, parcelas }]
   }),
   getters: {
@@ -16,8 +18,11 @@ export const useCartStore = defineStore('cart', {
     discountValue() {
       return this.subtotal * (this.discountPercent / 100)
     },
+    freteValue() {
+      return this.entrega ? Number(this.frete) || 0 : 0
+    },
     total() {
-      return Math.max(this.subtotal - this.discountValue, 0)
+      return Math.max(this.subtotal - this.discountValue, 0) + this.freteValue
     },
     totalPago: (state) => state.payments.reduce((sum, p) => sum + p.valor, 0),
     restante() {
@@ -76,6 +81,13 @@ export const useCartStore = defineStore('cart', {
     setDiscount(percent) {
       this.discountPercent = Math.min(Math.max(Number(percent) || 0, 0), 100)
     },
+    setEntrega(entrega) {
+      this.entrega = Boolean(entrega)
+      if (!this.entrega) this.frete = 0
+    },
+    setFrete(valor) {
+      this.frete = Math.max(Number(valor) || 0, 0)
+    },
     setCliente(cliente) {
       this.cliente = cliente
     },
@@ -96,6 +108,8 @@ export const useCartStore = defineStore('cart', {
       this.discountPercent = 0
       this.cliente = null
       this.vendedor = null
+      this.entrega = false
+      this.frete = 0
       this.payments = []
     },
   },

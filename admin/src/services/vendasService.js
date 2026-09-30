@@ -20,6 +20,10 @@ export function createVenda(payload) {
   return http.post('/vendas', payload)
 }
 
+export function updateVenda(id, payload) {
+  return http.put(`/vendas/${id}`, payload)
+}
+
 export function getDevolucoes() {
   return mockRequest(devolucoes)
 }

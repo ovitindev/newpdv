@@ -130,11 +130,11 @@ function handleNavClick() {
     <div class="shrink-0 border-t border-white/10 p-3">
       <div class="flex items-center gap-3 rounded-xl px-2 py-2" :class="collapsed ? 'justify-center' : ''">
         <span class="flex size-9 shrink-0 items-center justify-center rounded-full bg-brand-500 text-xs font-semibold text-white">
-          {{ authStore.user.iniciais }}
+          {{ authStore.user?.iniciais }}
         </span>
         <div v-if="!collapsed" class="min-w-0">
-          <p class="truncate text-sm font-medium text-white">{{ authStore.user.nome }}</p>
-          <p class="truncate text-xs text-brand-100/60">{{ authStore.user.cargo }}</p>
+          <p class="truncate text-sm font-medium text-white">{{ authStore.user?.nome }}</p>
+          <p class="truncate text-xs text-brand-100/60">{{ authStore.user?.cargo }}</p>
         </div>
       </div>
     </div>

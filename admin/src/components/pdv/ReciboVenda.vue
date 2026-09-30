@@ -89,6 +89,10 @@ const troco = computed(() => {
         <span>Desconto{{ Number(venda.discountPercent) > 0 ? ` (${venda.discountPercent}%)` : '' }}</span>
         <span class="tabular-nums">- {{ formatCurrency(venda.discountValue) }}</span>
       </div>
+      <div v-if="venda.entrega && Number(venda.valorFrete) > 0" class="flex justify-between">
+        <span>Frete (entrega)</span>
+        <span class="tabular-nums">+ {{ formatCurrency(venda.valorFrete) }}</span>
+      </div>
       <div class="mt-1 flex justify-between border-t border-ink pt-1.5 text-[15px] font-bold">
         <span>TOTAL</span><span class="tabular-nums">{{ formatCurrency(venda.total) }}</span>
       </div>

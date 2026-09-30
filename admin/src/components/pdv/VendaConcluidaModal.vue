@@ -83,6 +83,7 @@ function finish() {
         <div class="flex justify-between"><dt class="text-ink-soft">Vendedor</dt><dd class="font-medium text-ink">{{ venda.vendedor?.nome ?? 'Não informado' }}</dd></div>
         <div class="flex justify-between"><dt class="text-ink-soft">Cliente</dt><dd class="font-medium text-ink">{{ venda.cliente?.nome ?? 'Consumidor Final' }}</dd></div>
         <div class="flex justify-between"><dt class="text-ink-soft">Itens</dt><dd class="font-medium text-ink">{{ venda.itens.length }}</dd></div>
+        <div v-if="venda.entrega && Number(venda.valorFrete) > 0" class="flex justify-between"><dt class="text-ink-soft">Frete (entrega)</dt><dd class="font-medium text-ink">{{ formatCurrency(venda.valorFrete) }}</dd></div>
         <div class="flex justify-between">
           <dt class="text-ink-soft">Pagamento</dt>
           <dd class="font-medium text-ink text-right">

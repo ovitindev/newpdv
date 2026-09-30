@@ -1,16 +1,15 @@
 <script setup>
 import { computed, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { PanelLeft, Menu, Bell, ChevronRight, Search, Settings, LogOut, UserRound } from '@lucide/vue'
 import { useUiStore } from '@/stores/ui'
 import { useAuthStore } from '@/stores/auth'
-import { useToastStore } from '@/stores/toast'
 import Dropdown from '@/components/ui/Dropdown.vue'
 
 const route = useRoute()
+const router = useRouter()
 const uiStore = useUiStore()
 const authStore = useAuthStore()
-const toastStore = useToastStore()
 
 const search = ref('')
 const breadcrumb = computed(() => route.meta?.breadcrumb ?? [])
@@ -21,8 +20,9 @@ const notifications = [
   { id: 3, title: 'Nova venda', description: 'Venda #1048 registrada com sucesso.', time: 'há 2 min', variant: 'success' },
 ]
 
-function handleLogout() {
-  toastStore.info('Sessão encerrada', 'Este é um ambiente de demonstração.')
+async function handleLogout() {
+  await authStore.logout()
+  router.push('/login')
 }
 </script>
 
@@ -104,11 +104,11 @@ function handleLogout() {
       <template #trigger>
         <button type="button" class="flex items-center gap-2.5 rounded-lg py-1 pl-1 pr-2 hover:bg-surface transition-colors">
           <span class="flex size-8 items-center justify-center rounded-full bg-brand-500 text-xs font-semibold text-white">
-            {{ authStore.user.iniciais }}
+            {{ authStore.user?.iniciais }}
           </span>
           <span class="hidden sm:block text-left">
-            <span class="block text-sm font-medium text-ink leading-tight">{{ authStore.user.nome }}</span>
-            <span class="block text-xs text-ink-soft leading-tight">{{ authStore.user.cargo }}</span>
+            <span class="block text-sm font-medium text-ink leading-tight">{{ authStore.user?.nome }}</span>
+            <span class="block text-xs text-ink-soft leading-tight">{{ authStore.user?.cargo }}</span>
           </span>
         </button>
       </template>

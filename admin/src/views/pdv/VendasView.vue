@@ -1,11 +1,13 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
-import { Eye, Printer, Plus } from '@lucide/vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import { Eye, Printer, Plus, Pencil } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 import { useToastStore } from '@/stores/toast'
 import ReciboVenda from '@/components/pdv/ReciboVenda.vue'
+import EditarVendaModal from '@/components/pdv/EditarVendaModal.vue'
 import { getVenda, getVendas } from '@/services/vendasService'
 import { usePagination } from '@/utils/usePagination'
+import { useVendasTotais } from '@/composables/useVendasTotais'
 import Card from '@/components/ui/Card.vue'
 import Table from '@/components/ui/Table.vue'
 import Badge from '@/components/ui/Badge.vue'
@@ -14,6 +16,8 @@ import SearchInput from '@/components/ui/SearchInput.vue'
 import Select from '@/components/ui/Select.vue'
 import Button from '@/components/ui/Button.vue'
 import Modal from '@/components/ui/Modal.vue'
+import DatePicker from '@/components/ui/DatePicker.vue'
+import StatCard from '@/components/ui/StatCard.vue'
 import { formatCurrency, formatDateTime } from '@/utils/format'
 
 const router = useRouter()
@@ -22,6 +26,8 @@ const loading = ref(true)
 const vendas = ref([])
 const search = ref('')
 const statusFilter = ref('')
+const dataInicio = ref('')
+const dataFim = ref('')
 
 const statusOptions = [
   { value: '', label: 'Todos os status' },
@@ -29,10 +35,21 @@ const statusOptions = [
   { value: 'cancelada', label: 'Cancelada' },
 ]
 
-onMounted(async () => {
-  vendas.value = await getVendas()
+// Evita que uma resposta antiga (filtro anterior) sobrescreva uma mais recente
+// quando "De"/"Até" mudam rápido e as requisições voltam fora de ordem.
+let requisicaoAtual = 0
+
+async function carregar() {
+  const minhaRequisicao = ++requisicaoAtual
+  loading.value = true
+  const resultado = await getVendas({ dataInicio: dataInicio.value, dataFim: dataFim.value })
+  if (minhaRequisicao !== requisicaoAtual) return
+  vendas.value = resultado
   loading.value = false
-})
+}
+
+onMounted(carregar)
+watch([dataInicio, dataFim], carregar)
 
 const filtered = computed(() =>
   vendas.value.filter((venda) => {
@@ -44,6 +61,9 @@ const filtered = computed(() =>
     return matchesSearch && matchesStatus
   }),
 )
+
+// Os totais refletem o período (+ status) carregado, sem serem afetados pela busca por texto.
+const { vendasConcluidas, totalVendido: totalPeriodo, totalFrete } = useVendasTotais(vendas)
 
 const { page, pageSize, paginated } = usePagination(filtered, 6)
 
@@ -82,6 +102,8 @@ async function reimprimirRecibo(venda) {
       subtotal: d.subtotal,
       discountPercent: d.descontoPercent,
       discountValue: d.descontoValor,
+      entrega: d.entrega,
+      valorFrete: d.valorFrete,
       total: d.total,
       cliente: d.cliente === 'Consumidor Final' ? null : { nome: d.cliente },
       vendedor: d.vendedor ? { nome: d.vendedor } : null,
@@ -93,6 +115,28 @@ async function reimprimirRecibo(venda) {
   } finally {
     carregandoRecibo.value = false
   }
+}
+
+const vendaParaEditar = ref(null)
+const editarOpen = ref(false)
+const carregandoEdicao = ref(false)
+
+async function abrirEdicao(venda) {
+  if (carregandoEdicao.value) return
+  carregandoEdicao.value = true
+  try {
+    vendaParaEditar.value = await getVenda(venda.id)
+    editarOpen.value = true
+    selectedVenda.value = null
+  } catch (error) {
+    toast.error('Não foi possível carregar a venda', error.message)
+  } finally {
+    carregandoEdicao.value = false
+  }
+}
+
+function handleVendaSalva() {
+  carregar()
 }
 </script>
 
@@ -109,9 +153,17 @@ async function reimprimirRecibo(venda) {
       </Button>
     </div>
 
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <StatCard label="Vendas no período" :value="vendasConcluidas.length" icon="ShoppingBag" />
+      <StatCard label="Total vendido" :value="totalPeriodo" type="currency" icon="Wallet" />
+      <StatCard label="Total de frete (entrega)" :value="totalFrete" type="currency" icon="Truck" />
+    </div>
+
     <Card :padded="false" class="p-5 sm:p-6">
       <div class="flex flex-col sm:flex-row gap-3 mb-5">
         <div class="flex-1"><SearchInput v-model="search" placeholder="Buscar por cliente ou nº da venda..." /></div>
+        <DatePicker v-model="dataInicio" label="De" class="sm:w-40" />
+        <DatePicker v-model="dataFim" label="Até" class="sm:w-40" />
         <Select v-model="statusFilter" :options="statusOptions" class="sm:w-52" />
       </div>
 
@@ -138,6 +190,9 @@ async function reimprimirRecibo(venda) {
             <button class="flex size-8 items-center justify-center rounded-lg text-ink-faint hover:bg-surface hover:text-ink" title="Reimprimir recibo" @click="reimprimirRecibo(row)">
               <Printer :size="15" />
             </button>
+            <button class="flex size-8 items-center justify-center rounded-lg text-ink-faint hover:bg-surface hover:text-ink" title="Editar venda" @click="abrirEdicao(row)">
+              <Pencil :size="15" />
+            </button>
           </div>
         </template>
       </Table>
@@ -158,6 +213,7 @@ async function reimprimirRecibo(venda) {
       </dl>
       <template #footer>
         <Button variant="outline" @click="selectedVenda = null">Fechar</Button>
+        <Button variant="outline" :loading="carregandoEdicao" @click="abrirEdicao(selectedVenda)"><template #icon-left><Pencil :size="15" /></template>Editar</Button>
         <Button :loading="carregandoRecibo" @click="reimprimirRecibo(selectedVenda)"><template #icon-left><Printer :size="15" /></template>Reimprimir recibo</Button>
       </template>
     </Modal>
@@ -169,5 +225,7 @@ async function reimprimirRecibo(venda) {
         <Button @click="imprimir()"><template #icon-left><Printer :size="15" /></template>Imprimir</Button>
       </template>
     </Modal>
+
+    <EditarVendaModal v-model="editarOpen" :venda="vendaParaEditar" @saved="handleVendaSalva" />
   </div>
 </template>

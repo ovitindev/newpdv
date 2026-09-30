@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { getVendas } from '@/services/vendasService'
 import { getVendedores } from '@/services/configuracoesService'
+import { useVendasTotais } from '@/composables/useVendasTotais'
 import StatCard from '@/components/ui/StatCard.vue'
 import ChartCard from '@/components/ui/ChartCard.vue'
 import Card from '@/components/ui/Card.vue'
@@ -58,13 +59,20 @@ function onDataManual() {
   periodoAtivo.value = 'custom'
 }
 
+// Evita que uma resposta antiga (filtro anterior) sobrescreva uma mais recente
+// quando vendedor/datas mudam rápido e as requisições voltam fora de ordem.
+let requisicaoAtual = 0
+
 async function carregar() {
+  const minhaRequisicao = ++requisicaoAtual
   loading.value = true
-  vendas.value = await getVendas({
+  const resultado = await getVendas({
     vendedorId: vendedorId.value || undefined,
     dataInicio: dataInicio.value,
     dataFim: dataFim.value,
   })
+  if (minhaRequisicao !== requisicaoAtual) return
+  vendas.value = resultado
   loading.value = false
 }
 
@@ -89,12 +97,10 @@ const vendedorOptions = computed(() => [
 
 const vendedorSelecionado = computed(() => vendedores.value.find((v) => String(v.id) === String(vendedorId.value)) ?? null)
 
-const vendasConcluidas = computed(() => vendas.value.filter((v) => v.status === 'concluida'))
-const totalVendido = computed(() => vendasConcluidas.value.reduce((sum, v) => sum + v.total, 0))
-const quantidadeVendas = computed(() => vendasConcluidas.value.length)
-const ticketMedio = computed(() => (quantidadeVendas.value ? totalVendido.value / quantidadeVendas.value : 0))
+const { vendasConcluidas, totalVendido, totalFrete, quantidadeVendas, ticketMedio } = useVendasTotais(vendas)
+// Frete é repassado ao entregador, não é venda do vendedor — não entra na base de comissão.
 const comissaoEstimada = computed(() =>
-  vendedorSelecionado.value ? totalVendido.value * (Number(vendedorSelecionado.value.comissao) / 100) : 0,
+  vendedorSelecionado.value ? (totalVendido.value - totalFrete.value) * (Number(vendedorSelecionado.value.comissao) / 100) : 0,
 )
 
 function formatPeriodoISO(iso) {
@@ -163,6 +169,7 @@ const columns = [
         <StatCard label="Total vendido" :value="totalVendido" type="currency" icon="Wallet" />
         <StatCard label="Vendas concluídas" :value="quantidadeVendas" icon="ShoppingBag" />
         <StatCard label="Ticket médio" :value="ticketMedio" type="currency" icon="Receipt" />
+        <StatCard label="Total de frete (entrega)" :value="totalFrete" type="currency" icon="Truck" />
         <StatCard
           v-if="vendedorSelecionado"
           label="Comissão estimada"
