@@ -79,7 +79,7 @@ Sempre que subir código novo (`git push` daqui), no servidor rode só:
 sh deploy/atualizar.sh
 ```
 
-Isso faz `git pull`, rebuilda o painel (`admin/dist/`) e reinicia o container do PHP — os três passos que uma atualização precisa. O reinício do PHP é obrigatório mesmo quando só o backend muda: o `opcache.ini` roda com `validate_timestamps=0` (pra acelerar as requisições), então o PHP-FPM fica servindo o código antigo em cache até o container reiniciar, mesmo já com o `git pull` feito.
+Isso faz `git pull`, rebuilda o painel (`admin/dist/`), reinicia o container do PHP e roda as migrations pendentes — os quatro passos que uma atualização precisa. O reinício do PHP é obrigatório mesmo quando só o backend muda: o `opcache.ini` roda com `validate_timestamps=0` (pra acelerar as requisições), então o PHP-FPM fica servindo o código antigo em cache até o container reiniciar, mesmo já com o `git pull` feito.
 
 ## Backups
 O banco fica no volume Docker `pdvloja_db_data`. Faça backup periódico com:

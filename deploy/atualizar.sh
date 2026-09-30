@@ -18,4 +18,7 @@ sh deploy/build-frontend.sh
 echo "==> reiniciando o PHP (app) pra recarregar o opcache"
 docker compose -f docker-compose.prod.yml restart app
 
+echo "==> rodando migrations pendentes"
+docker compose -f docker-compose.prod.yml exec app php artisan migrate --force
+
 echo "Atualizado."
