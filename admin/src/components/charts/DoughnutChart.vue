@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import { Doughnut } from 'vue-chartjs'
-import '@/utils/chartSetup'
+import { resolveColor } from '@/utils/chartSetup'
 
 const props = defineProps({
   items: { type: Array, required: true }, // [{ label, value, color }]
@@ -13,7 +13,7 @@ const chartData = computed(() => ({
   datasets: [
     {
       data: props.items.map((item) => item.value),
-      backgroundColor: props.items.map((item) => item.color),
+      backgroundColor: props.items.map((item) => resolveColor(item.color)),
       borderWidth: 3,
       borderColor: '#ffffff',
       hoverOffset: 4,

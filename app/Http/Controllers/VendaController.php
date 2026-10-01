@@ -31,7 +31,10 @@ class VendaController extends Controller
             'desconto_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'entrega' => ['nullable', 'boolean'],
             'valor_frete' => ['nullable', 'numeric', 'min:0'],
-            'itens' => ['required', 'array', 'min:1'],
+            // "present" em vez de "required": permite array vazio quando a
+            // venda é só um frete avulso (ex: motoboy fazendo um serviço
+            // que não é venda de produto), sem item nenhum no carrinho.
+            'itens' => ['present', 'array'],
             'itens.*.produto_id' => ['nullable', 'exists:produtos,id'],
             'itens.*.nome' => ['required', 'string', 'max:255'],
             'itens.*.codigo' => ['nullable', 'string', 'max:100'],
@@ -43,6 +46,13 @@ class VendaController extends Controller
             'pagamentos.*.valor' => ['required', 'numeric', 'min:0.01'],
             'pagamentos.*.parcelas' => ['nullable', 'integer', 'min:1', 'max:12'],
         ]);
+
+        $temFreteAvulso = ($data['entrega'] ?? false) && ($data['valor_frete'] ?? 0) > 0;
+        if (empty($data['itens']) && ! $temFreteAvulso) {
+            return response()->json([
+                'message' => 'Adicione pelo menos um item ou um valor de frete para lançar a venda.',
+            ], 422);
+        }
 
         $subtotal = collect($data['itens'])->sum(fn ($item) => $item['preco'] * $item['quantidade']);
         $descontoPercent = $data['desconto_percent'] ?? 0;

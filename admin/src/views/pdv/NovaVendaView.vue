@@ -166,7 +166,9 @@ const concluidaOpen = ref(false)
 const vendaConcluida = ref(null)
 
 function abrirPagamento() {
-  if (!cart.items.length) return
+  // Permite finalizar sem nenhum item no carrinho quando é só um frete avulso
+  // (ex: pagar o motoboy por um serviço que não é venda de produto).
+  if (!cart.items.length && !(cart.entrega && cart.freteValue > 0)) return
   if (!cart.vendedor) {
     toast.error('Selecione o vendedor', 'Escolha quem está realizando esta venda antes de continuar.')
     vendedorOpen.value = true
@@ -451,7 +453,7 @@ function handleFinish() {
           </div>
         </div>
 
-        <Button size="lg" block :disabled="!cart.items.length" @click="abrirPagamento">
+        <Button size="lg" block :disabled="!cart.items.length && !(cart.entrega && cart.freteValue > 0)" @click="abrirPagamento">
           FINALIZAR VENDA · {{ formatCurrency(cart.total) }}
         </Button>
       </div>

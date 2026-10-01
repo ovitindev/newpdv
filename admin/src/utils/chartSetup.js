@@ -23,4 +23,15 @@ ChartJS.defaults.plugins.tooltip.padding = 10
 ChartJS.defaults.plugins.tooltip.cornerRadius = 8
 ChartJS.defaults.plugins.tooltip.displayColors = false
 
+// Chart.js desenha em <canvas>, que não entende var(--token) — precisa do
+// valor já resolvido. Sem isso, uma cor como 'var(--color-brand-500)' vira
+// preto no gráfico em vez do verde esperado.
+export function resolveColor(color) {
+  if (typeof color !== 'string') return color
+  const match = color.match(/^var\((--[\w-]+)\)$/)
+  if (!match) return color
+  const resolved = getComputedStyle(document.documentElement).getPropertyValue(match[1]).trim()
+  return resolved || color
+}
+
 export { ChartJS }
