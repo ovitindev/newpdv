@@ -40,6 +40,11 @@ export const navigation = [
     to: '/fornecedores',
   },
   {
+    label: 'Pedidos',
+    icon: 'ClipboardList',
+    to: '/pedidos',
+  },
+  {
     label: 'Financeiro',
     icon: 'Wallet',
     children: [

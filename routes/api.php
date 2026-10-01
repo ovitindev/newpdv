@@ -14,6 +14,7 @@ use App\Http\Controllers\FornecedorController;
 use App\Http\Controllers\MarcaController;
 use App\Http\Controllers\MovimentacaoEstoqueController;
 use App\Http\Controllers\NotaFiscalController;
+use App\Http\Controllers\PedidoCompraController;
 use App\Http\Controllers\PerfilController;
 use App\Http\Controllers\ProdutoController;
 use App\Http\Controllers\UsuarioController;
@@ -55,6 +56,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::apiResource('clientes', ClienteController::class);
     Route::apiResource('fornecedores', FornecedorController::class)->parameters(['fornecedores' => 'fornecedor']);
+    Route::apiResource('pedidos-compra', PedidoCompraController::class)
+        ->parameters(['pedidos-compra' => 'pedidoCompra']);
 
     Route::apiResource('vendas', VendaController::class)->only(['index', 'store', 'show', 'update']);
     Route::apiResource('devolucoes', DevolucaoController::class)

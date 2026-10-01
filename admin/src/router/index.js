@@ -81,6 +81,12 @@ const routes = [
         component: () => import('@/views/FornecedoresView.vue'),
         meta: { title: 'Fornecedores', breadcrumb: ['Fornecedores'] },
       },
+      {
+        path: 'pedidos',
+        name: 'pedidos',
+        component: () => import('@/views/PedidosCompraView.vue'),
+        meta: { title: 'Pedidos de Compra', breadcrumb: ['Pedidos'] },
+      },
       // Financeiro
       {
         path: 'financeiro/contas-a-pagar',
