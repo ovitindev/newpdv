@@ -1,5 +1,5 @@
 <script setup>
-import { onBeforeUnmount, onMounted, watch } from 'vue'
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { X } from '@lucide/vue'
 
 const props = defineProps({
@@ -21,10 +21,27 @@ function handleEscape(event) {
 onMounted(() => document.addEventListener('keydown', handleEscape))
 onBeforeUnmount(() => document.removeEventListener('keydown', handleEscape))
 
+const dialogEl = ref(null)
+const FOCUSABLE_SELECTOR =
+  'input:not([disabled]):not([type="hidden"]), textarea:not([disabled]), select:not([disabled]), button:not([disabled]):not([aria-label="Fechar"]), [tabindex]:not([tabindex="-1"])'
+
 watch(
   () => props.modelValue,
-  (isOpen) => {
+  async (isOpen) => {
     document.body.style.overflow = isOpen ? 'hidden' : ''
+    if (isOpen) {
+      // Sem isto, o campo que estava focado por trás (ex: busca de produto no
+      // PDV) continua recebendo o teclado mesmo com o modal aberto por cima.
+      // Espera um frame pra dar chance de algum conteúdo do modal focar um
+      // campo específico sozinho (ex: PaymentModal foca o valor) antes de
+      // aplicar esse fallback genérico — assim não brigam pelo foco.
+      await nextTick()
+      requestAnimationFrame(() => {
+        if (!dialogEl.value?.contains(document.activeElement)) {
+          dialogEl.value?.querySelector(FOCUSABLE_SELECTOR)?.focus()
+        }
+      })
+    }
   },
 )
 
@@ -51,7 +68,14 @@ const sizeClasses = { sm: 'max-w-sm', md: 'max-w-lg', lg: 'max-w-2xl' }
           leave-from-class="opacity-100 scale-100"
           leave-to-class="opacity-0 scale-95"
         >
-          <div v-if="modelValue" class="flex max-h-[calc(100dvh-2rem)] w-full flex-col rounded-2xl bg-white shadow-soft-lg" :class="sizeClasses[size]" role="dialog" aria-modal="true">
+          <div
+            v-if="modelValue"
+            ref="dialogEl"
+            class="flex max-h-[calc(100dvh-2rem)] w-full flex-col rounded-2xl bg-white shadow-soft-lg"
+            :class="sizeClasses[size]"
+            role="dialog"
+            aria-modal="true"
+          >
             <header v-if="title || $slots.header" class="flex shrink-0 items-center justify-between gap-4 border-b border-border px-6 py-4">
               <slot name="header">
                 <h3 class="text-base font-semibold text-ink">{{ title }}</h3>
