@@ -118,7 +118,7 @@ function submitAvulso() {
 // Modal: cliente
 const clienteOpen = ref(false)
 const clienteSearch = ref('')
-const novoClienteForm = ref({ nome: '', telefone: '' })
+const novoClienteForm = ref({ nome: '', documento: '', telefone: '' })
 
 const filteredClientes = computed(() =>
   clientes.value.filter((cliente) => cliente.nome.toLowerCase().includes(clienteSearch.value.toLowerCase())),
@@ -135,10 +135,14 @@ async function addNovoCliente() {
   if (!novoClienteForm.value.nome) return
   salvandoCliente.value = true
   try {
-    const cliente = await createCliente({ nome: novoClienteForm.value.nome, telefone: novoClienteForm.value.telefone || null })
+    const cliente = await createCliente({
+      nome: novoClienteForm.value.nome,
+      documento: novoClienteForm.value.documento || null,
+      telefone: novoClienteForm.value.telefone || null,
+    })
     clientes.value.unshift(cliente)
     cart.setCliente(cliente)
-    novoClienteForm.value = { nome: '', telefone: '' }
+    novoClienteForm.value = { nome: '', documento: '', telefone: '' }
     clienteOpen.value = false
     toast.success('Cliente cadastrado', `${cliente.nome} foi adicionado e selecionado.`)
   } catch (error) {
@@ -510,7 +514,8 @@ function handleFinish() {
           </p>
           <div class="grid grid-cols-2 gap-3">
             <Input v-model="novoClienteForm.nome" placeholder="Nome do cliente" />
-            <Input v-model="novoClienteForm.telefone" placeholder="Telefone" />
+            <Input v-model="novoClienteForm.documento" placeholder="CPF/CNPJ" />
+            <Input v-model="novoClienteForm.telefone" placeholder="Telefone" class="col-span-2" />
           </div>
           <Button size="sm" variant="outline" :loading="salvandoCliente" @click="addNovoCliente">Cadastrar e selecionar</Button>
         </div>
