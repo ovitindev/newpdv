@@ -183,6 +183,30 @@ class VendaController extends Controller
         return $this->presentDetail($venda->load(['cliente', 'vendedor', 'itens', 'pagamentos', 'operador']));
     }
 
+    public function destroy(Venda $venda)
+    {
+        // A nota fiscal só se desliga da venda (nullOnDelete) — apagar a venda
+        // deixaria uma nota autorizada na SEFAZ sem venda correspondente.
+        if ($venda->notasFiscais()->where('status', 'autorizada')->exists()) {
+            return response()->json([
+                'message' => 'Esta venda tem nota fiscal autorizada. Cancele a nota antes de excluir a venda.',
+            ], 422);
+        }
+
+        DB::transaction(function () use ($venda) {
+            // Uma venda cancelada já teve o estoque devolvido no cancelamento —
+            // devolver de novo aqui duplicaria o crédito.
+            if ($venda->status !== 'cancelada') {
+                $this->ajustarEstoque($venda, devolver: true);
+            }
+
+            // venda_itens e venda_pagamentos caem junto (cascadeOnDelete).
+            $venda->delete();
+        });
+
+        return response()->noContent();
+    }
+
     /** Devolve (cancelamento) ou desconta de novo (reativação) o estoque dos itens com produto cadastrado. */
     private function ajustarEstoque(Venda $venda, bool $devolver): void
     {

@@ -24,6 +24,10 @@ export function updateVenda(id, payload) {
   return http.put(`/vendas/${id}`, payload)
 }
 
+export function deleteVenda(id) {
+  return http.delete(`/vendas/${id}`)
+}
+
 export function getDevolucoes() {
   return mockRequest(devolucoes)
 }

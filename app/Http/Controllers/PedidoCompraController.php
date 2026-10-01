@@ -19,12 +19,14 @@ class PedidoCompraController extends Controller
             'cliente_nome' => ['nullable', 'string', 'max:255'],
             'cliente_contato' => ['nullable', 'string', 'max:100'],
             'descricao' => ['required', 'string'],
-            'quantidade' => ['nullable', 'integer', 'min:1'],
-            'status' => ['nullable', 'in:pendente,comprado,disponivel,concluido,cancelado'],
+            'quantidade' => ['sometimes', 'integer', 'min:1'],
+            'status' => ['sometimes', 'in:pendente,comprado,disponivel,concluido,cancelado'],
             'observacoes' => ['nullable', 'string'],
         ]);
 
-        return response()->json(PedidoCompra::create($data), 201);
+        // refresh() traz os defaults do banco (status 'pendente', quantidade 1)
+        // que não vieram no request — senão a resposta sai sem esses campos.
+        return response()->json(PedidoCompra::create($data)->refresh(), 201);
     }
 
     public function show(PedidoCompra $pedidoCompra)
@@ -39,8 +41,8 @@ class PedidoCompraController extends Controller
             'cliente_nome' => ['nullable', 'string', 'max:255'],
             'cliente_contato' => ['nullable', 'string', 'max:100'],
             'descricao' => ['sometimes', 'required', 'string'],
-            'quantidade' => ['nullable', 'integer', 'min:1'],
-            'status' => ['nullable', 'in:pendente,comprado,disponivel,concluido,cancelado'],
+            'quantidade' => ['sometimes', 'integer', 'min:1'],
+            'status' => ['sometimes', 'in:pendente,comprado,disponivel,concluido,cancelado'],
             'observacoes' => ['nullable', 'string'],
         ]);
 

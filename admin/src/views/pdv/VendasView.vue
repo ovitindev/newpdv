@@ -1,11 +1,11 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
-import { Eye, Printer, Plus, Pencil } from '@lucide/vue'
+import { Eye, Printer, Plus, Pencil, Trash2 } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 import { useToastStore } from '@/stores/toast'
 import ReciboVenda from '@/components/pdv/ReciboVenda.vue'
 import EditarVendaModal from '@/components/pdv/EditarVendaModal.vue'
-import { getVenda, getVendas } from '@/services/vendasService'
+import { deleteVenda, getVenda, getVendas } from '@/services/vendasService'
 import { usePagination } from '@/utils/usePagination'
 import { useVendasTotais } from '@/composables/useVendasTotais'
 import Card from '@/components/ui/Card.vue'
@@ -139,6 +139,28 @@ async function abrirEdicao(venda) {
 function handleVendaSalva() {
   carregar()
 }
+
+const excluindo = ref(false)
+
+async function excluir(venda) {
+  if (excluindo.value) return
+  const aviso = venda.status === 'cancelada'
+    ? `Excluir a venda #${venda.id} de vez? Essa ação não pode ser desfeita.`
+    : `Excluir a venda #${venda.id} de vez? O estoque dos produtos vendidos será devolvido e a venda sai dos totais. Essa ação não pode ser desfeita.`
+  if (!window.confirm(aviso)) return
+
+  excluindo.value = true
+  try {
+    await deleteVenda(venda.id)
+    vendas.value = vendas.value.filter((v) => v.id !== venda.id)
+    selectedVenda.value = null
+    toast.success('Venda excluída', `Venda #${venda.id} foi removida.`)
+  } catch (error) {
+    toast.error('Não foi possível excluir a venda', error.message)
+  } finally {
+    excluindo.value = false
+  }
+}
 </script>
 
 <template>
@@ -194,6 +216,9 @@ function handleVendaSalva() {
             <button class="flex size-8 items-center justify-center rounded-lg text-ink-faint hover:bg-surface hover:text-ink" title="Editar venda" @click="abrirEdicao(row)">
               <Pencil :size="15" />
             </button>
+            <button class="flex size-8 items-center justify-center rounded-lg text-ink-faint hover:bg-surface hover:text-danger" title="Excluir venda" @click="excluir(row)">
+              <Trash2 :size="15" />
+            </button>
           </div>
         </template>
       </Table>
@@ -213,6 +238,7 @@ function handleVendaSalva() {
         </div>
       </dl>
       <template #footer>
+        <Button variant="ghost" :loading="excluindo" @click="excluir(selectedVenda)"><template #icon-left><Trash2 :size="15" /></template>Excluir</Button>
         <Button variant="outline" @click="selectedVenda = null">Fechar</Button>
         <Button variant="outline" :loading="carregandoEdicao" @click="abrirEdicao(selectedVenda)"><template #icon-left><Pencil :size="15" /></template>Editar</Button>
         <Button :loading="carregandoRecibo" @click="reimprimirRecibo(selectedVenda)"><template #icon-left><Printer :size="15" /></template>Reimprimir recibo</Button>

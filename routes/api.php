@@ -59,7 +59,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('pedidos-compra', PedidoCompraController::class)
         ->parameters(['pedidos-compra' => 'pedidoCompra']);
 
-    Route::apiResource('vendas', VendaController::class)->only(['index', 'store', 'show', 'update']);
+    Route::apiResource('vendas', VendaController::class)->only(['index', 'store', 'show', 'update', 'destroy']);
     Route::apiResource('devolucoes', DevolucaoController::class)
         ->only(['index', 'store', 'update'])
         ->parameters(['devolucoes' => 'devolucao']);
