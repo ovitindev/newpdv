@@ -61,8 +61,10 @@ Route::middleware('auth:sanctum')->group(function () {
         ->only(['index', 'store', 'update'])
         ->parameters(['devolucoes' => 'devolucao']);
 
+    Route::post('/contas-pagar/replicar', [ContaPagarController::class, 'replicar']);
     Route::apiResource('contas-pagar', ContaPagarController::class)
         ->parameters(['contas-pagar' => 'contaPagar']);
+    Route::post('/contas-receber/replicar', [ContaReceberController::class, 'replicar']);
     Route::apiResource('contas-receber', ContaReceberController::class)
         ->parameters(['contas-receber' => 'contaReceber']);
 

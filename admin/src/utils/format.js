@@ -36,6 +36,20 @@ export function formatDateTime(value) {
   return formatDate(value, { hour: '2-digit', minute: '2-digit' })
 }
 
+// Para campos que são só uma data (ex: vencimento), sem significado de hora.
+// O Laravel serializa um cast "date" como meia-noite UTC; formatar em UTC
+// evita que o fuso local jogue a data exibida pro dia anterior.
+export function formatDateOnly(value) {
+  const date = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(date.getTime())) return '—'
+  return new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(date)
+}
+
 export function formatRelativeTime(value) {
   const date = value instanceof Date ? value : new Date(value)
   if (Number.isNaN(date.getTime())) return '—'

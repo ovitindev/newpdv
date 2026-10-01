@@ -12,13 +12,14 @@ class ContaReceber extends Model
 
     protected $table = 'contas_receber';
 
-    protected $fillable = ['empresa_id', 'venda_id', 'descricao', 'categoria', 'valor', 'vencimento', 'status'];
+    protected $fillable = ['empresa_id', 'venda_id', 'descricao', 'categoria', 'valor', 'vencimento', 'status', 'recorrente'];
 
     protected function casts(): array
     {
         return [
             'valor' => 'decimal:2',
             'vencimento' => 'date',
+            'recorrente' => 'boolean',
         ];
     }
 

@@ -11,13 +11,14 @@ class ContaPagar extends Model
 
     protected $table = 'contas_pagar';
 
-    protected $fillable = ['empresa_id', 'descricao', 'categoria', 'valor', 'vencimento', 'status'];
+    protected $fillable = ['empresa_id', 'descricao', 'categoria', 'valor', 'vencimento', 'status', 'recorrente'];
 
     protected function casts(): array
     {
         return [
             'valor' => 'decimal:2',
             'vencimento' => 'date',
+            'recorrente' => 'boolean',
         ];
     }
 }

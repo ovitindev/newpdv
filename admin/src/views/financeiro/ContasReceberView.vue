@@ -1,8 +1,13 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { Plus, CheckCircle2 } from '@lucide/vue'
-import { getContasReceber } from '@/services/financeiroService'
-import { financeStatusOptions } from '@/data/mock/financeiro'
+import { Plus, CheckCircle2, Repeat, Trash2 } from '@lucide/vue'
+import {
+  getContasReceber,
+  createContaReceber,
+  updateContaReceber,
+  deleteContaReceber,
+  replicarContasReceber,
+} from '@/services/financeiroService'
 import { useToastStore } from '@/stores/toast'
 import { usePagination } from '@/utils/usePagination'
 import Card from '@/components/ui/Card.vue'
@@ -16,7 +21,8 @@ import Modal from '@/components/ui/Modal.vue'
 import Input from '@/components/ui/Input.vue'
 import MoneyInput from '@/components/ui/MoneyInput.vue'
 import DatePicker from '@/components/ui/DatePicker.vue'
-import { formatCurrency, formatDate } from '@/utils/format'
+import Switch from '@/components/ui/Switch.vue'
+import { formatCurrency, formatDateOnly } from '@/utils/format'
 
 const toast = useToastStore()
 const loading = ref(true)
@@ -24,10 +30,20 @@ const contas = ref([])
 const search = ref('')
 const statusFilter = ref('')
 
-onMounted(async () => {
+const statusOptions = [
+  { value: '', label: 'Todos os status' },
+  { value: 'pendente', label: 'Pendente' },
+  { value: 'atrasado', label: 'Atrasado' },
+  { value: 'recebido', label: 'Recebido' },
+]
+
+async function carregar() {
+  loading.value = true
   contas.value = await getContasReceber()
   loading.value = false
-})
+}
+
+onMounted(carregar)
 
 const filtered = computed(() =>
   contas.value.filter((c) => {
@@ -37,7 +53,7 @@ const filtered = computed(() =>
   }),
 )
 
-const totalReceber = computed(() => contas.value.filter((c) => c.status !== 'recebido').reduce((sum, c) => sum + c.valor, 0))
+const totalReceber = computed(() => contas.value.filter((c) => c.status !== 'recebido').reduce((sum, c) => sum + Number(c.valor), 0))
 
 const { page, pageSize, paginated } = usePagination(filtered, 8)
 
@@ -50,23 +66,65 @@ const columns = [
   { key: 'acoes', label: '', align: 'right' },
 ]
 
-const statusVariant = { pendente: 'warning', atrasado: 'danger', pago: 'success', recebido: 'success' }
-const statusLabel = { pendente: 'Pendente', atrasado: 'Atrasado', pago: 'Pago', recebido: 'Recebido' }
+const statusVariant = { pendente: 'warning', atrasado: 'danger', recebido: 'success' }
+const statusLabel = { pendente: 'Pendente', atrasado: 'Atrasado', recebido: 'Recebido' }
 
-function marcarRecebido(conta) {
-  conta.status = 'recebido'
-  toast.success('Recebimento confirmado', `${conta.descricao} marcada como recebida.`)
+async function marcarRecebido(conta) {
+  try {
+    const atualizada = await updateContaReceber(conta.id, { ...conta, status: 'recebido' })
+    Object.assign(conta, atualizada)
+    toast.success('Recebimento confirmado', `${conta.descricao} marcada como recebida.`)
+  } catch (error) {
+    toast.error('Não foi possível confirmar o recebimento', error.message)
+  }
+}
+
+async function excluir(conta) {
+  try {
+    await deleteContaReceber(conta.id)
+    contas.value = contas.value.filter((c) => c.id !== conta.id)
+    toast.success('Conta removida')
+  } catch (error) {
+    toast.error('Não foi possível remover a conta', error.message)
+  }
+}
+
+const replicando = ref(false)
+async function replicar() {
+  replicando.value = true
+  try {
+    const resultado = await replicarContasReceber()
+    if (resultado.criadas > 0) {
+      toast.success('Contas replicadas', `${resultado.criadas} conta(s) recorrente(s) gerada(s) para o próximo mês.`)
+      await carregar()
+    } else {
+      toast.info('Nada para replicar', 'Todas as contas recorrentes já têm a próxima ocorrência lançada.')
+    }
+  } catch (error) {
+    toast.error('Não foi possível replicar as contas', error.message)
+  } finally {
+    replicando.value = false
+  }
 }
 
 const modalOpen = ref(false)
-const form = ref({ descricao: '', categoria: '', valor: '', vencimento: '' })
+const salvando = ref(false)
+const form = ref({ descricao: '', categoria: '', valor: '', vencimento: '', recorrente: false })
 
-function submit() {
-  if (!form.value.descricao || !form.value.valor) return
-  contas.value.unshift({ id: Date.now(), ...form.value, valor: Number(form.value.valor), status: 'pendente' })
-  form.value = { descricao: '', categoria: '', valor: '', vencimento: '' }
-  modalOpen.value = false
-  toast.success('Conta a receber cadastrada')
+async function submit() {
+  if (!form.value.descricao || !form.value.valor || !form.value.vencimento) return
+  salvando.value = true
+  try {
+    const nova = await createContaReceber(form.value)
+    contas.value.unshift(nova)
+    form.value = { descricao: '', categoria: '', valor: '', vencimento: '', recorrente: false }
+    modalOpen.value = false
+    toast.success('Conta a receber cadastrada')
+  } catch (error) {
+    toast.error('Não foi possível cadastrar a conta', error.message)
+  } finally {
+    salvando.value = false
+  }
 }
 </script>
 
@@ -79,28 +137,42 @@ function submit() {
           Total a receber: <span class="font-semibold text-ink">{{ formatCurrency(totalReceber) }}</span>
         </p>
       </div>
-      <Button @click="modalOpen = true"><template #icon-left><Plus :size="16" /></template>Nova Conta</Button>
+      <div class="flex items-center gap-2">
+        <Button variant="outline" :loading="replicando" @click="replicar">
+          <template #icon-left><Repeat :size="16" /></template>
+          Replicar contas
+        </Button>
+        <Button @click="modalOpen = true"><template #icon-left><Plus :size="16" /></template>Nova Conta</Button>
+      </div>
     </div>
 
     <Card :padded="false" class="p-5 sm:p-6">
       <div class="flex flex-col sm:flex-row gap-3 mb-5">
         <div class="flex-1"><SearchInput v-model="search" placeholder="Buscar conta..." /></div>
-        <Select v-model="statusFilter" :options="financeStatusOptions" class="sm:w-52" />
+        <Select v-model="statusFilter" :options="statusOptions" class="sm:w-52" />
       </div>
 
       <Table :columns="columns" :rows="paginated" :loading="loading" empty-icon="ArrowDownCircle" empty-title="Nenhuma conta a receber">
-        <template #cell-descricao="{ value }"><span class="font-medium text-ink">{{ value }}</span></template>
+        <template #cell-descricao="{ row, value }">
+          <span class="font-medium text-ink">{{ value }}</span>
+          <Badge v-if="row.recorrente" variant="info" size="sm" class="ml-2">Recorrente</Badge>
+        </template>
         <template #cell-valor="{ value }"><span class="font-semibold text-ink">{{ formatCurrency(value) }}</span></template>
-        <template #cell-vencimento="{ value }"><span class="text-ink-soft">{{ formatDate(value) }}</span></template>
+        <template #cell-vencimento="{ value }"><span class="text-ink-soft">{{ formatDateOnly(value) }}</span></template>
         <template #cell-status="{ value }"><Badge :variant="statusVariant[value]" dot>{{ statusLabel[value] }}</Badge></template>
         <template #cell-acoes="{ row }">
-          <button
-            v-if="row.status !== 'recebido'"
-            class="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-brand-700 hover:bg-brand-50"
-            @click="marcarRecebido(row)"
-          >
-            <CheckCircle2 :size="14" /> Confirmar recebimento
-          </button>
+          <div class="flex items-center justify-end gap-1">
+            <button
+              v-if="row.status !== 'recebido'"
+              class="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-brand-700 hover:bg-brand-50"
+              @click="marcarRecebido(row)"
+            >
+              <CheckCircle2 :size="14" /> Confirmar recebimento
+            </button>
+            <button class="flex size-8 items-center justify-center rounded-lg text-ink-faint hover:bg-surface hover:text-danger" title="Excluir" @click="excluir(row)">
+              <Trash2 :size="15" />
+            </button>
+          </div>
         </template>
       </Table>
 
@@ -113,10 +185,17 @@ function submit() {
         <Input v-model="form.categoria" label="Categoria" placeholder="Ex: Vendas a prazo..." />
         <MoneyInput v-model="form.valor" label="Valor" required />
         <DatePicker v-model="form.vencimento" label="Vencimento" />
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm font-medium text-ink">Conta recorrente</p>
+            <p class="text-xs text-ink-faint">Aparece no botão "Replicar contas" todo mês</p>
+          </div>
+          <Switch v-model="form.recorrente" />
+        </div>
       </div>
       <template #footer>
-        <Button variant="ghost" @click="modalOpen = false">Cancelar</Button>
-        <Button @click="submit">Cadastrar</Button>
+        <Button variant="ghost" :disabled="salvando" @click="modalOpen = false">Cancelar</Button>
+        <Button :loading="salvando" @click="submit">Cadastrar</Button>
       </template>
     </Modal>
   </div>

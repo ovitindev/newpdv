@@ -2,28 +2,61 @@
 import { computed, onMounted, ref } from 'vue'
 import { Line } from 'vue-chartjs'
 import '@/utils/chartSetup'
-import { getFinanceOverview } from '@/services/financeiroService'
+import { getVendas } from '@/services/vendasService'
+import { getContasPagar, getContasReceber } from '@/services/financeiroService'
 import ChartCard from '@/components/ui/ChartCard.vue'
 import Skeleton from '@/components/ui/Skeleton.vue'
 import { formatCurrency } from '@/utils/format'
 
 const loading = ref(true)
-const summary = ref(null)
-const cashFlow = ref(null)
+const vendas = ref([])
+const contasPagar = ref([])
+const contasReceber = ref([])
 
 onMounted(async () => {
-  const data = await getFinanceOverview()
-  summary.value = data.financeSummary
-  cashFlow.value = data.cashFlow
+  const [vendasData, pagarData, receberData] = await Promise.all([getVendas(), getContasPagar(), getContasReceber()])
+  vendas.value = vendasData
+  contasPagar.value = pagarData
+  contasReceber.value = receberData
   loading.value = false
 })
 
+const vendasConcluidas = computed(() => vendas.value.filter((v) => v.status === 'concluida'))
+const contasPagas = computed(() => contasPagar.value.filter((c) => c.status === 'pago'))
+
+const totalEntradasHistorico = computed(() => vendasConcluidas.value.reduce((sum, v) => sum + v.total, 0))
+const totalSaidasHistorico = computed(() => contasPagas.value.reduce((sum, c) => sum + Number(c.valor), 0))
+const saldoDisponivel = computed(() => totalEntradasHistorico.value - totalSaidasHistorico.value)
+
+function mesmoDia(isoDate, dia) {
+  const d = new Date(isoDate)
+  return d.getFullYear() === dia.getFullYear() && d.getMonth() === dia.getMonth() && d.getDate() === dia.getDate()
+}
+
+const ultimosDias = computed(() => {
+  const dias = []
+  for (let i = 6; i >= 0; i--) {
+    const dia = new Date()
+    dia.setDate(dia.getDate() - i)
+    dias.push(dia)
+  }
+  return dias
+})
+
+const entradasPeriodo = computed(() =>
+  ultimosDias.value.map((dia) => vendasConcluidas.value.filter((v) => mesmoDia(v.data, dia)).reduce((sum, v) => sum + v.total, 0)),
+)
+// Vencimento é usado como aproximação da data de pagamento (não existe "data paga" separada ainda).
+const saidasPeriodo = computed(() =>
+  ultimosDias.value.map((dia) => contasPagas.value.filter((c) => mesmoDia(c.vencimento, dia)).reduce((sum, c) => sum + Number(c.valor), 0)),
+)
+
 const tiles = computed(() => [
-  { key: 'saldoDisponivel', label: 'Saldo disponível', accent: 'brand' },
-  { key: 'entradas', label: 'Entradas', accent: 'success' },
-  { key: 'saidas', label: 'Saídas', accent: 'danger' },
-  { key: 'contasReceber', label: 'Contas a receber', accent: 'info' },
-  { key: 'contasPagar', label: 'Contas a pagar', accent: 'warning' },
+  { label: 'Saldo disponível', value: saldoDisponivel.value, accent: 'brand' },
+  { label: 'Entradas (7 dias)', value: entradasPeriodo.value.reduce((a, b) => a + b, 0), accent: 'success' },
+  { label: 'Saídas (7 dias)', value: saidasPeriodo.value.reduce((a, b) => a + b, 0), accent: 'danger' },
+  { label: 'Contas a receber', value: contasReceber.value.filter((c) => c.status !== 'recebido').reduce((sum, c) => sum + Number(c.valor), 0), accent: 'info' },
+  { label: 'Contas a pagar', value: contasPagar.value.filter((c) => c.status !== 'pago').reduce((sum, c) => sum + Number(c.valor), 0), accent: 'warning' },
 ])
 
 const tileClasses = {
@@ -35,11 +68,11 @@ const tileClasses = {
 }
 
 const chartData = computed(() => ({
-  labels: cashFlow.value.labels,
+  labels: ultimosDias.value.map((d) => d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })),
   datasets: [
     {
       label: 'Entradas',
-      data: cashFlow.value.entradas,
+      data: entradasPeriodo.value,
       borderColor: '#16c43f',
       backgroundColor: 'rgba(22, 196, 63, 0.08)',
       tension: 0.38,
@@ -50,7 +83,7 @@ const chartData = computed(() => ({
     },
     {
       label: 'Saídas',
-      data: cashFlow.value.saidas,
+      data: saidasPeriodo.value,
       borderColor: '#e5484d',
       backgroundColor: 'rgba(229, 72, 77, 0.06)',
       tension: 0.38,
@@ -88,9 +121,9 @@ const chartOptions = {
         <Skeleton v-for="n in 5" :key="n" height="5.5rem" rounded="16px" />
       </template>
       <template v-else>
-        <div v-for="tile in tiles" :key="tile.key" class="card-surface p-5" :class="tileClasses[tile.accent]">
+        <div v-for="tile in tiles" :key="tile.label" class="card-surface p-5" :class="tileClasses[tile.accent]">
           <p class="text-sm" :class="tile.accent === 'brand' ? 'text-brand-100' : 'text-ink-soft'">{{ tile.label }}</p>
-          <p class="text-xl font-bold mt-1.5">{{ formatCurrency(summary[tile.key]) }}</p>
+          <p class="text-xl font-bold mt-1.5">{{ formatCurrency(tile.value) }}</p>
         </div>
       </template>
     </div>
