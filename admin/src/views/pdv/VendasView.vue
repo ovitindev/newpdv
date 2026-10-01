@@ -18,11 +18,7 @@ import Button from '@/components/ui/Button.vue'
 import Modal from '@/components/ui/Modal.vue'
 import DatePicker from '@/components/ui/DatePicker.vue'
 import StatCard from '@/components/ui/StatCard.vue'
-import { formatCurrency, formatDateTime } from '@/utils/format'
-
-function hoje() {
-  return new Date().toISOString().slice(0, 10)
-}
+import { formatCurrency, formatDateTime, localISODate } from '@/utils/format'
 
 const router = useRouter()
 const toast = useToastStore()
@@ -31,8 +27,8 @@ const vendas = ref([])
 const search = ref('')
 const statusFilter = ref('')
 // Abre já filtrado no dia de hoje — ajustável pelo usuário se quiser ver outro período.
-const dataInicio = ref(hoje())
-const dataFim = ref(hoje())
+const dataInicio = ref(localISODate())
+const dataFim = ref(localISODate())
 
 const statusOptions = [
   { value: '', label: 'Todos os status' },

@@ -9,7 +9,7 @@ import Input from '@/components/ui/Input.vue'
 import Button from '@/components/ui/Button.vue'
 import Alert from '@/components/ui/Alert.vue'
 import Skeleton from '@/components/ui/Skeleton.vue'
-import { formatDate } from '@/utils/format'
+import { formatDateOnly } from '@/utils/format'
 
 const toast = useToastStore()
 const loading = ref(true)
@@ -72,7 +72,7 @@ function submit() {
           <div>
             <p class="text-sm font-medium text-ink">{{ certificado.arquivo }}</p>
             <p class="text-xs text-ink-soft mt-0.5">{{ certificado.titular }}</p>
-            <p class="text-xs text-ink-faint mt-0.5">Emitido por {{ certificado.emissor }} · válido até {{ formatDate(certificado.validoAte) }}</p>
+            <p class="text-xs text-ink-faint mt-0.5">Emitido por {{ certificado.emissor }} · válido até {{ formatDateOnly(certificado.validoAte) }}</p>
           </div>
         </div>
         <Badge variant="success" dot>

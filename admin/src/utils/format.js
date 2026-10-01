@@ -73,3 +73,14 @@ export function formatRelativeTime(value) {
 export function minutesAgo(minutes) {
   return new Date(Date.now() - minutes * 60000)
 }
+
+// "Hoje" no fuso do navegador, no formato YYYY-MM-DD usado pelos filtros de
+// data e pelo <input type="date">. NUNCA use date.toISOString().slice(0, 10)
+// pra isso — toISOString() converte pra UTC, então no Brasil (UTC-3) dá a
+// data de amanhã entre ~21h e meia-noite.
+export function localISODate(date = new Date()) {
+  const ano = date.getFullYear()
+  const mes = String(date.getMonth() + 1).padStart(2, '0')
+  const dia = String(date.getDate()).padStart(2, '0')
+  return `${ano}-${mes}-${dia}`
+}

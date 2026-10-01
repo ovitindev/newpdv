@@ -65,21 +65,28 @@ class ContaPagarController extends Controller
     {
         $hoje = now();
 
-        $ultimasPorDescricao = ContaPagar::where('recorrente', true)
-            ->orderByDesc('vencimento')
+        $porDescricao = ContaPagar::where('recorrente', true)
+            ->orderBy('vencimento')
             ->get()
-            ->unique('descricao');
+            ->groupBy('descricao');
 
         $criadas = [];
 
-        foreach ($ultimasPorDescricao as $conta) {
-            $destino = $conta->vencimento->copy()->addMonthNoOverflow();
+        foreach ($porDescricao as $ocorrencias) {
+            $maisRecente = $ocorrencias->last();
+            // Usa sempre o dia-do-mês da 1ª ocorrência (não da mais recente,
+            // que pode já ter sido clampada por um mês curto) — senão uma
+            // conta do dia 31 vira 28 e nunca mais volta a ser 31.
+            $diaOriginal = $ocorrencias->first()->vencimento->day;
+
+            $destino = $maisRecente->vencimento->copy()->addMonthNoOverflow();
+            $destino->day(min($diaOriginal, $destino->daysInMonth));
 
             if ($destino->year > $hoje->year || ($destino->year === $hoje->year && $destino->month > $hoje->month)) {
                 continue;
             }
 
-            $jaExiste = ContaPagar::where('descricao', $conta->descricao)
+            $jaExiste = ContaPagar::where('descricao', $maisRecente->descricao)
                 ->whereYear('vencimento', $destino->year)
                 ->whereMonth('vencimento', $destino->month)
                 ->exists();
@@ -89,9 +96,9 @@ class ContaPagarController extends Controller
             }
 
             $criadas[] = ContaPagar::create([
-                'descricao' => $conta->descricao,
-                'categoria' => $conta->categoria,
-                'valor' => $conta->valor,
+                'descricao' => $maisRecente->descricao,
+                'categoria' => $maisRecente->categoria,
+                'valor' => $maisRecente->valor,
                 'vencimento' => $destino,
                 'status' => 'pendente',
                 'recorrente' => true,

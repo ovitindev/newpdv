@@ -22,8 +22,12 @@ onMounted(() => document.addEventListener('keydown', handleEscape))
 onBeforeUnmount(() => document.removeEventListener('keydown', handleEscape))
 
 const dialogEl = ref(null)
-const FOCUSABLE_SELECTOR =
-  'input:not([disabled]):not([type="hidden"]), textarea:not([disabled]), select:not([disabled]), button:not([disabled]):not([aria-label="Fechar"]), [tabindex]:not([tabindex="-1"])'
+// Só campo de preenchimento — nunca botão. Um modal sem nenhum desses (ex:
+// "Selecionar vendedor", lista de botões, ou "Venda concluída", com ações
+// como "Emitir Nota Fiscal") não tem o problema que isto resolve (campo de
+// texto recebendo teclado por trás do modal), e autofocar um botão de ação
+// deixaria um Enter/espaço acidental disparar a ação sozinho.
+const FOCUSABLE_SELECTOR = 'input:not([disabled]):not([type="hidden"]), textarea:not([disabled]), select:not([disabled])'
 
 watch(
   () => props.modelValue,

@@ -6,7 +6,7 @@ import { getVendas } from '@/services/vendasService'
 import { getContasPagar, getContasReceber } from '@/services/financeiroService'
 import ChartCard from '@/components/ui/ChartCard.vue'
 import Skeleton from '@/components/ui/Skeleton.vue'
-import { formatCurrency } from '@/utils/format'
+import { formatCurrency, localISODate } from '@/utils/format'
 
 const loading = ref(true)
 const vendas = ref([])
@@ -28,9 +28,18 @@ const totalEntradasHistorico = computed(() => vendasConcluidas.value.reduce((sum
 const totalSaidasHistorico = computed(() => contasPagas.value.reduce((sum, c) => sum + Number(c.valor), 0))
 const saldoDisponivel = computed(() => totalEntradasHistorico.value - totalSaidasHistorico.value)
 
-function mesmoDia(isoDate, dia) {
-  const d = new Date(isoDate)
+// venda.data é um datetime de verdade (momento da venda) — comparar no fuso
+// local é o certo.
+function mesmoDia(isoDateTime, dia) {
+  const d = new Date(isoDateTime)
   return d.getFullYear() === dia.getFullYear() && d.getMonth() === dia.getMonth() && d.getDate() === dia.getDate()
+}
+
+// vencimento é só uma data (cast "date" do Laravel, serializada como meia-
+// noite UTC) — comparar via new Date(...).getDate() no fuso local pode cair
+// no dia anterior. Comparar a string "YYYY-MM-DD" direto evita isso.
+function mesmaDataVencimento(vencimentoISO, dia) {
+  return vencimentoISO.slice(0, 10) === localISODate(dia)
 }
 
 const ultimosDias = computed(() => {
@@ -48,7 +57,7 @@ const entradasPeriodo = computed(() =>
 )
 // Vencimento é usado como aproximação da data de pagamento (não existe "data paga" separada ainda).
 const saidasPeriodo = computed(() =>
-  ultimosDias.value.map((dia) => contasPagas.value.filter((c) => mesmoDia(c.vencimento, dia)).reduce((sum, c) => sum + Number(c.valor), 0)),
+  ultimosDias.value.map((dia) => contasPagas.value.filter((c) => mesmaDataVencimento(c.vencimento, dia)).reduce((sum, c) => sum + Number(c.valor), 0)),
 )
 
 const tiles = computed(() => [

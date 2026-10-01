@@ -9,7 +9,7 @@ import Table from '@/components/ui/Table.vue'
 import Skeleton from '@/components/ui/Skeleton.vue'
 import DatePicker from '@/components/ui/DatePicker.vue'
 import BarChart from '@/components/charts/BarChart.vue'
-import { formatCurrency, formatDateOnly } from '@/utils/format'
+import { formatCurrency, formatDateOnly, localISODate } from '@/utils/format'
 
 const loading = ref(true)
 const vendas = ref([])
@@ -19,9 +19,7 @@ const dataInicio = ref('')
 const dataFim = ref('')
 const periodoAtivo = ref('mes')
 
-function toISODate(date) {
-  return date.toISOString().slice(0, 10)
-}
+const toISODate = localISODate
 
 function startOfWeek(date) {
   const d = new Date(date)
@@ -97,7 +95,11 @@ function noPeriodo(vencimento) {
   return data >= dataInicio.value && data <= dataFim.value
 }
 
-const receita = computed(() => vendas.value.filter((v) => v.status === 'concluida').reduce((sum, v) => sum + v.total, 0))
+const vendasConcluidas = computed(() => vendas.value.filter((v) => v.status === 'concluida'))
+// Frete é repassado ao entregador, não é receita da loja — mesmo critério já
+// usado na comissão estimada do Relatório de Vendas.
+const totalFrete = computed(() => vendasConcluidas.value.reduce((sum, v) => sum + (v.valorFrete || 0), 0))
+const receita = computed(() => vendasConcluidas.value.reduce((sum, v) => sum + v.total, 0) - totalFrete.value)
 
 const despesasPagas = computed(() => contasPagar.value.filter((c) => c.status === 'pago' && noPeriodo(c.vencimento)))
 const totalDespesasPagas = computed(() => despesasPagas.value.reduce((sum, c) => sum + Number(c.valor), 0))
@@ -157,10 +159,11 @@ const columns = [
       </div>
     </Card>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-      <template v-if="loading"><Skeleton v-for="n in 4" :key="n" height="7rem" rounded="16px" /></template>
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
+      <template v-if="loading"><Skeleton v-for="n in 5" :key="n" height="7rem" rounded="16px" /></template>
       <template v-else>
-        <StatCard label="Receita (vendas)" :value="receita" type="currency" icon="Wallet" />
+        <StatCard label="Receita (produtos)" :value="receita" type="currency" icon="Wallet" />
+        <StatCard label="Frete repassado" :value="totalFrete" type="currency" icon="Truck" />
         <StatCard label="Despesas pagas" :value="totalDespesasPagas" type="currency" icon="ArrowUpCircle" />
         <StatCard
           :label="resultado >= 0 ? 'Lucro do período' : 'Prejuízo do período'"

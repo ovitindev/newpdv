@@ -150,18 +150,66 @@ class VendaController extends Controller
         $valorFrete = $entrega ? round($data['valor_frete'] ?? 0, 2) : 0;
         $total = round((float) $venda->subtotal - $descontoValor + $valorFrete, 2);
 
-        $venda->update([
-            'cliente_id' => $data['cliente_id'] ?? null,
-            'vendedor_id' => $data['vendedor_id'],
-            'desconto_percent' => $descontoPercent,
-            'desconto_valor' => $descontoValor,
-            'entrega' => $entrega,
-            'valor_frete' => $valorFrete,
-            'total' => $total,
-            'status' => $data['status'],
-        ]);
+        // Mesma regra do cadastro: uma venda concluída precisa ter item ou
+        // frete. Não vale pra cancelamento — cancelar uma venda vazia é ok.
+        $temFreteAvulso = $entrega && $valorFrete > 0;
+        if ($venda->itens->isEmpty() && ! $temFreteAvulso && $data['status'] !== 'cancelada') {
+            return response()->json([
+                'message' => 'Essa venda não tem itens — adicione um valor de frete ou cancele a venda.',
+            ], 422);
+        }
+
+        DB::transaction(function () use ($venda, $data, $descontoPercent, $descontoValor, $entrega, $valorFrete, $total) {
+            if ($data['status'] !== $venda->status) {
+                if ($data['status'] === 'cancelada') {
+                    $this->ajustarEstoque($venda, devolver: true);
+                } elseif ($venda->status === 'cancelada' && $data['status'] === 'concluida') {
+                    $this->ajustarEstoque($venda, devolver: false);
+                }
+            }
+
+            $venda->update([
+                'cliente_id' => $data['cliente_id'] ?? null,
+                'vendedor_id' => $data['vendedor_id'],
+                'desconto_percent' => $descontoPercent,
+                'desconto_valor' => $descontoValor,
+                'entrega' => $entrega,
+                'valor_frete' => $valorFrete,
+                'total' => $total,
+                'status' => $data['status'],
+            ]);
+        });
 
         return $this->presentDetail($venda->load(['cliente', 'vendedor', 'itens', 'pagamentos', 'operador']));
+    }
+
+    /** Devolve (cancelamento) ou desconta de novo (reativação) o estoque dos itens com produto cadastrado. */
+    private function ajustarEstoque(Venda $venda, bool $devolver): void
+    {
+        foreach ($venda->itens as $item) {
+            if (empty($item->produto_id)) {
+                continue;
+            }
+
+            $produto = Produto::find($item->produto_id);
+            if (! $produto) {
+                continue;
+            }
+
+            if ($devolver) {
+                $produto->increment('estoque', $item->quantidade);
+            } else {
+                $produto->decrement('estoque', $item->quantidade);
+            }
+
+            MovimentacaoEstoque::create([
+                'produto_id' => $produto->id,
+                'tipo' => $devolver ? 'entrada' : 'saida',
+                'quantidade' => $devolver ? $item->quantidade : -$item->quantidade,
+                'motivo' => $devolver ? "Cancelamento da venda #{$venda->id}" : "Reativação da venda #{$venda->id}",
+                'responsavel' => 'PDV',
+            ]);
+        }
     }
 
     private function presentSummary(Venda $venda): array

@@ -12,7 +12,7 @@ import Skeleton from '@/components/ui/Skeleton.vue'
 import Select from '@/components/ui/Select.vue'
 import DatePicker from '@/components/ui/DatePicker.vue'
 import LineChart from '@/components/charts/LineChart.vue'
-import { formatCurrency, formatDateTime } from '@/utils/format'
+import { formatCurrency, formatDateTime, localISODate } from '@/utils/format'
 
 const loading = ref(true)
 const vendas = ref([])
@@ -23,9 +23,7 @@ const dataInicio = ref('')
 const dataFim = ref('')
 const periodoAtivo = ref('semana')
 
-function toISODate(date) {
-  return date.toISOString().slice(0, 10)
-}
+const toISODate = localISODate
 
 // Segunda-feira como início da semana (padrão comercial no Brasil)
 function startOfWeek(date) {
