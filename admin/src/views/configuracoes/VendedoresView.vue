@@ -157,7 +157,7 @@ async function remove(vendedor) {
             <Input v-model="form.meta_semanal" type="number" label="Meta da semana (R$)" placeholder="Ex: 3000" />
             <Input v-model="form.bonus_meta" type="number" label="Bônus da meta (R$)" placeholder="Ex: 50" />
           </div>
-          <p class="text-xs text-ink-faint">A semana vai de segunda a domingo. O bônus é pago quando as vendas da semana passam da meta. Deixe em branco o que não se aplica.</p>
+          <p class="text-xs text-ink-faint">A semana vai de domingo a sábado. O bônus é pago quando as vendas da semana passam da meta. Deixe em branco o que não se aplica.</p>
         </div>
       </div>
       <template #footer>

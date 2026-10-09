@@ -25,9 +25,8 @@ function intervalo(id) {
   const hoje = new Date()
   const ini = new Date(hoje)
   if (id === 'semana') {
-    // Segunda-feira como início da semana, igual ao relatório do painel.
-    const dia = ini.getDay()
-    ini.setDate(ini.getDate() + (dia === 0 ? -6 : 1 - dia))
+    // Semana de domingo a sábado (getDay(): domingo = 0), igual ao cálculo da comissão.
+    ini.setDate(ini.getDate() - ini.getDay())
   } else if (id === 'mes') {
     ini.setDate(1)
   }

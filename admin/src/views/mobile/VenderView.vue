@@ -15,6 +15,7 @@ import { whatsappLink } from '@/utils/whatsapp'
 import BottomSheet from '@/components/mobile/BottomSheet.vue'
 import ClientePicker from '@/components/mobile/ClientePicker.vue'
 import BarcodeScanner from '@/components/mobile/BarcodeScanner.vue'
+import MoneyField from '@/components/mobile/MoneyField.vue'
 
 const auth = useAuthStore()
 const cart = useCartStore()
@@ -115,10 +116,10 @@ function lido(codigo) {
 
 // Item avulso
 const avulsoAberto = ref(false)
-const avulso = ref({ nome: '', preco: '', quantidade: '1' })
+const avulso = ref({ nome: '', preco: 0, quantidade: '1' })
 const num = (v) => Number(String(v).replace(',', '.')) || 0
 function abrirAvulso() {
-  avulso.value = { nome: busca.value.trim(), preco: '', quantidade: '1' }
+  avulso.value = { nome: busca.value.trim(), preco: 0, quantidade: '1' }
   avulsoAberto.value = true
 }
 function addAvulso() {
@@ -163,14 +164,14 @@ const metodos = [
 ]
 const metodoLabel = Object.fromEntries(metodos.map((m) => [m.id, m.label]))
 const metodo = ref('')
-const valorPagamento = ref('')
+const valorPagamento = ref(0)
 const parcelas = ref(1)
-const recebido = ref('')
+const recebido = ref(0)
 
 watch(metodo, () => {
-  valorPagamento.value = cart.restante.toFixed(2).replace('.', ',')
+  valorPagamento.value = cart.restante
   parcelas.value = 1
-  recebido.value = ''
+  recebido.value = 0
 })
 
 const troco = computed(() => (metodo.value === 'dinheiro' && recebido.value ? Math.max(num(recebido.value) - num(valorPagamento.value), 0) : 0))
@@ -184,7 +185,8 @@ function addPagamento() {
   if (metodo.value === 'dinheiro') trocoVenda.value = troco.value
   cart.addPayment({ method: metodo.value, valor, parcelas: metodo.value === 'credito' ? parcelas.value : 1 })
   metodo.value = ''
-  valorPagamento.value = ''
+  valorPagamento.value = 0
+  recebido.value = 0
 }
 
 // Mesma chave em todas as tentativas de fechar ESTA venda; muda só depois de concluída.
@@ -345,9 +347,7 @@ const tituloSheet = computed(() => ({ carrinho: 'Carrinho', pagamento: 'Pagament
           <input v-model="avulso.nome" type="text" class="h-12 w-full rounded-2xl border border-border px-4 text-base outline-none focus:border-brand-400" />
         </label>
         <div class="grid grid-cols-2 gap-3">
-          <label class="block"><span class="mb-1.5 block text-sm font-medium">Valor (R$)</span>
-            <input v-model="avulso.preco" type="text" inputmode="decimal" placeholder="0,00" class="h-12 w-full rounded-2xl border border-border px-4 text-base outline-none focus:border-brand-400" />
-          </label>
+          <MoneyField v-model="avulso.preco" label="Valor" />
           <label class="block"><span class="mb-1.5 block text-sm font-medium">Quantidade</span>
             <input v-model="avulso.quantidade" type="text" inputmode="decimal" class="h-12 w-full rounded-2xl border border-border px-4 text-base outline-none focus:border-brand-400" />
           </label>
@@ -400,7 +400,7 @@ const tituloSheet = computed(() => ({ carrinho: 'Carrinho', pagamento: 'Pagament
             <span class="flex-1 font-medium text-ink">Entrega / frete</span>
             <span class="relative h-7 w-12 rounded-full transition-colors" :class="cart.entrega ? 'bg-brand-600' : 'bg-border'"><span class="absolute top-0.5 size-6 rounded-full bg-white shadow transition-all" :class="cart.entrega ? 'left-[22px]' : 'left-0.5'" /></span>
           </button>
-          <input v-if="cart.entrega" :value="cart.frete || ''" type="text" inputmode="decimal" placeholder="Valor do frete (R$)" class="mt-2 h-12 w-full rounded-2xl border border-border px-4 text-base outline-none focus:border-brand-400" @input="cart.setFrete(num($event.target.value))" />
+          <div v-if="cart.entrega" class="mt-2"><MoneyField :model-value="cart.frete" label="Valor do frete" @update:model-value="cart.setFrete($event)" /></div>
         </div>
 
         <dl class="space-y-1.5 rounded-2xl bg-surface p-4 text-sm">
@@ -435,9 +435,7 @@ const tituloSheet = computed(() => ({ carrinho: 'Carrinho', pagamento: 'Pagament
           </div>
 
           <div v-if="metodo" class="space-y-3 rounded-2xl bg-surface p-4">
-            <label class="block"><span class="mb-1.5 block text-sm font-medium">Valor neste pagamento (R$)</span>
-              <input v-model="valorPagamento" type="text" inputmode="decimal" class="h-14 w-full rounded-2xl border border-border bg-white px-4 text-xl font-semibold outline-none focus:border-brand-400" />
-            </label>
+            <MoneyField v-model="valorPagamento" label="Valor neste pagamento" large />
             <div v-if="metodo === 'credito'">
               <p class="mb-1.5 text-sm font-medium">Parcelas</p>
               <div class="flex flex-wrap gap-2">
@@ -445,10 +443,10 @@ const tituloSheet = computed(() => ({ carrinho: 'Carrinho', pagamento: 'Pagament
               </div>
               <p class="mt-1.5 text-xs text-ink-faint">{{ parcelas }}x de {{ formatCurrency(num(valorPagamento) / parcelas) }}</p>
             </div>
-            <label v-if="metodo === 'dinheiro'" class="block"><span class="mb-1.5 block text-sm font-medium">Valor recebido (para o troco)</span>
-              <input v-model="recebido" type="text" inputmode="decimal" placeholder="Opcional" class="h-12 w-full rounded-2xl border border-border bg-white px-4 text-base outline-none focus:border-brand-400" />
+            <div v-if="metodo === 'dinheiro'">
+              <MoneyField v-model="recebido" label="Valor recebido (para o troco)" />
               <span v-if="troco > 0" class="mt-1.5 block text-lg font-semibold text-brand-700">Troco: {{ formatCurrency(troco) }}</span>
-            </label>
+            </div>
             <button class="h-[52px] w-full rounded-2xl bg-brand-600 font-semibold text-white active:bg-brand-700" @click="addPagamento">Adicionar {{ formatCurrency(num(valorPagamento)) }}</button>
           </div>
         </template>

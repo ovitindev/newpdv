@@ -12,12 +12,12 @@ class ComissaoController extends Controller
     /**
      * Quanto pagar a um vendedor num período.
      *
-     * As regras (vale e meta) são semanais, de segunda a domingo. Uma semana
-     * pertence ao período em que cai a sua segunda-feira — assim cada semana
+     * As regras (vale e meta) são semanais, de domingo a sábado. Uma semana
+     * pertence ao período em que cai o seu domingo — assim cada semana
      * é paga uma única vez, sem repartir o vale entre dois meses.
      *
      *   ?tipo=semana&ref=2026-10-09   → a semana que contém a data
-     *   ?tipo=mes&ref=2026-10-09      → semanas com segunda-feira dentro do mês
+     *   ?tipo=mes&ref=2026-10-09      → semanas com domingo dentro do mês
      *   ?vendedor_id=N                → só vale para quem não é vendedor
      */
     public function show(Request $request)
@@ -36,17 +36,17 @@ class ComissaoController extends Controller
         $ref = isset($data['ref']) ? Carbon::parse($data['ref']) : Carbon::today();
 
         if ($tipo === 'mes') {
-            $segundas = [];
+            $domingos = [];
             $inicioMes = $ref->copy()->startOfMonth();
-            $primeira = $inicioMes->copy()->startOfWeek(Carbon::MONDAY);
+            $primeira = $inicioMes->copy()->startOfWeek(Carbon::SUNDAY);
             if ($primeira->lt($inicioMes)) {
                 $primeira->addWeek();
             }
             for ($s = $primeira; $s->lte($ref->copy()->endOfMonth()); $s = $s->copy()->addWeek()) {
-                $segundas[] = $s->copy();
+                $domingos[] = $s->copy();
             }
         } else {
-            $segundas = [$ref->copy()->startOfWeek(Carbon::MONDAY)];
+            $domingos = [$ref->copy()->startOfWeek(Carbon::SUNDAY)];
         }
 
         $pct = (float) $vendedor->comissao;
@@ -56,16 +56,16 @@ class ComissaoController extends Controller
         $hoje = Carbon::today();
 
         $semanas = [];
-        foreach ($segundas as $segunda) {
+        foreach ($domingos as $inicioSemana) {
             // Semana que ainda não começou não entra no pagamento.
-            if ($segunda->gt($hoje)) {
+            if ($inicioSemana->gt($hoje)) {
                 continue;
             }
-            $domingo = $segunda->copy()->endOfWeek(Carbon::SUNDAY);
+            $sabado = $inicioSemana->copy()->endOfWeek(Carbon::SATURDAY);
 
             $vendas = Venda::concluidas()
                 ->where('vendedor_id', $vendedor->id)
-                ->whereBetween('created_at', [$segunda->copy()->startOfDay(), $domingo])
+                ->whereBetween('created_at', [$inicioSemana->copy()->startOfDay(), $sabado])
                 ->selectRaw('COALESCE(SUM(total), 0) as soma, COUNT(*) as qtd')
                 ->first();
 
@@ -76,9 +76,9 @@ class ComissaoController extends Controller
             $comissao = round($totalVendas * $pct / 100, 2);
 
             $semanas[] = [
-                'inicio' => $segunda->toDateString(),
-                'fim' => $domingo->toDateString(),
-                'emAndamento' => $domingo->gte($hoje),
+                'inicio' => $inicioSemana->toDateString(),
+                'fim' => $sabado->toDateString(),
+                'emAndamento' => $sabado->gte($hoje),
                 'vendas' => $totalVendas,
                 'quantidade' => (int) $vendas->qtd,
                 'comissao' => $comissao,

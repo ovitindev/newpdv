@@ -12,9 +12,9 @@ const auth = useAuthStore()
 const toast = useToastStore()
 
 const periodos = [
-  { id: 'hoje', label: 'Hoje', dias: 0 },
-  { id: '7', label: '7 dias', dias: 6 },
-  { id: '30', label: '30 dias', dias: 29 },
+  { id: 'hoje', label: 'Hoje' },
+  { id: 'semana', label: 'Semana' },
+  { id: 'mes', label: 'Mês' },
 ]
 const periodo = ref('hoje')
 const vendas = ref([])
@@ -25,8 +25,10 @@ let requisicao = 0
 async function carregar() {
   const minha = ++requisicao
   loading.value = true
+  // Semana de domingo a sábado e mês do dia 1 até hoje (não são "últimos N dias").
   const ini = new Date()
-  ini.setDate(ini.getDate() - periodos.find((p) => p.id === periodo.value).dias)
+  if (periodo.value === 'semana') ini.setDate(ini.getDate() - ini.getDay())
+  else if (periodo.value === 'mes') ini.setDate(1)
   try {
     const lista = await getVendas({ dataInicio: localISODate(ini), dataFim: localISODate(new Date()) })
     if (minha === requisicao) vendas.value = lista

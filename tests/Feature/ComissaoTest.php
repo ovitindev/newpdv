@@ -83,16 +83,16 @@ class ComissaoTest extends TestCase
             ->assertJsonPath('totais.total', 176);
     }
 
-    public function test_mes_soma_semanas_com_segunda_dentro_do_mes_e_ignora_canceladas(): void
+    public function test_mes_soma_semanas_com_domingo_dentro_do_mes_e_ignora_canceladas(): void
     {
         $v = $this->vendedora();
-        $this->venda($v, 4000, '2026-10-05 10:00:00'); // semana 05/10 (meta batida)
+        $this->venda($v, 4000, '2026-10-05 10:00:00'); // semana 04/10 (meta batida)
         $this->venda($v, 500, '2026-10-12 10:00:00');  // futuro: ignorado
         $cancelada = Venda::create(['empresa_id' => $this->admin->empresa_id, 'vendedor_id' => $v->id, 'subtotal' => 900, 'total' => 900, 'status' => 'cancelada']);
         $cancelada->forceFill(['created_at' => '2026-10-06 10:00:00'])->save();
 
         Sanctum::actingAs(User::where('email', 'ana@loja.com')->first());
-        // Segundas de outubro/2026 até hoje: 05/10 apenas (a de 12/10 ainda não começou).
+        // Domingos de outubro/2026 até hoje: 04/10 apenas (a de 11/10 ainda não começou).
         $this->getJson('/api/comissao?tipo=mes')
             ->assertOk()
             ->assertJsonCount(1, 'semanas')
@@ -107,5 +107,23 @@ class ComissaoTest extends TestCase
 
         $this->getJson("/api/comissao?vendedor_id={$v->id}")->assertOk()->assertJsonPath('vendedor.nome', 'Ana');
         $this->getJson('/api/comissao')->assertUnprocessable();
+    }
+
+    public function test_semana_vai_de_domingo_a_sabado(): void
+    {
+        $v = $this->vendedora();
+        $this->venda($v, 100, '2026-10-03 23:59:00'); // sábado anterior: semana passada
+        $this->venda($v, 200, '2026-10-04 00:30:00'); // domingo: começa esta semana
+        $this->venda($v, 300, '2026-10-09 09:00:00'); // sexta
+
+        Sanctum::actingAs(User::where('email', 'ana@loja.com')->first());
+        $this->getJson('/api/comissao?tipo=semana&ref=2026-10-09')
+            ->assertJsonPath('semanas.0.inicio', '2026-10-04')
+            ->assertJsonPath('semanas.0.fim', '2026-10-10')
+            ->assertJsonPath('totais.vendas', 500);
+
+        $this->getJson('/api/comissao?tipo=semana&ref=2026-10-03')
+            ->assertJsonPath('semanas.0.inicio', '2026-09-27')
+            ->assertJsonPath('totais.vendas', 100);
     }
 }

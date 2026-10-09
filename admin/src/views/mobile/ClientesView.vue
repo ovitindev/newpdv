@@ -4,7 +4,7 @@ import { Search, Plus, Phone, MessageCircle, Pencil } from '@lucide/vue'
 import { createCliente, updateCliente } from '@/services/clientesService'
 import { useClientes } from '@/composables/useClientes'
 import { useToastStore } from '@/stores/toast'
-import { telLink, whatsappLink } from '@/utils/whatsapp'
+import { mascaraTelefone, telLink, whatsappLink } from '@/utils/whatsapp'
 import BottomSheet from '@/components/mobile/BottomSheet.vue'
 
 const toast = useToastStore()
@@ -106,7 +106,7 @@ async function salvar() {
           <input v-model="form.nome" type="text" autocomplete="off" class="h-12 w-full rounded-2xl border border-border px-4 text-base outline-none focus:border-brand-400" />
         </label>
         <label class="block"><span class="mb-1.5 block text-sm font-medium">Telefone / WhatsApp</span>
-          <input v-model="form.telefone" type="tel" inputmode="tel" placeholder="(00) 00000-0000" class="h-12 w-full rounded-2xl border border-border px-4 text-base outline-none focus:border-brand-400" />
+          <input :value="form.telefone" type="tel" inputmode="tel" placeholder="(00) 00000-0000" @input="form.telefone = mascaraTelefone($event.target.value)" class="h-12 w-full rounded-2xl border border-border px-4 text-base outline-none focus:border-brand-400" />
         </label>
         <label class="block"><span class="mb-1.5 block text-sm font-medium">E-mail</span>
           <input v-model="form.email" type="email" inputmode="email" autocapitalize="off" class="h-12 w-full rounded-2xl border border-border px-4 text-base outline-none focus:border-brand-400" />
