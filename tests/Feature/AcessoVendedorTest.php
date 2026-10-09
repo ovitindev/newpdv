@@ -64,7 +64,7 @@ class AcessoVendedorTest extends TestCase
         $this->getJson('/api/vendas')->assertOk()->assertJsonCount(1);
     }
 
-    public function test_vendedora_nao_ve_venda_de_outra_nem_areas_administrativas(): void
+    public function test_vendedora_ve_vendas_de_todos_mas_nao_acessa_areas_administrativas(): void
     {
         $this->criarVendedora();
         $outra = Vendedor::create(['empresa_id' => $this->admin->empresa_id, 'nome' => 'Outra']);
@@ -75,12 +75,11 @@ class AcessoVendedorTest extends TestCase
 
         Sanctum::actingAs(User::where('email', 'ana@loja.com')->first());
 
-        $this->getJson("/api/vendas/{$venda->id}")->assertNotFound();
-        $this->getJson('/api/vendas')->assertOk()->assertJsonCount(0);
+        $this->getJson("/api/vendas/{$venda->id}")->assertOk();
+        $this->getJson('/api/vendas')->assertOk()->assertJsonCount(1);
         $this->getJson('/api/vendedores')->assertForbidden();
         $this->getJson('/api/contas-pagar')->assertForbidden();
         $this->getJson('/api/dashboard')->assertForbidden();
-        $this->putJson("/api/vendas/{$venda->id}", [])->assertForbidden();
         $this->postJson('/api/produtos', [])->assertForbidden();
         $this->getJson('/api/produtos')->assertOk();
         $this->getJson('/api/clientes')->assertOk();
@@ -158,5 +157,63 @@ class AcessoVendedorTest extends TestCase
         $this->assertSame($primeira, $segunda);
         $this->assertSame(1, \App\Models\Venda::count());
         $this->assertEquals(4, $produto->fresh()->estoque); // baixou uma vez só
+    }
+
+    private function vendaDe(Vendedor $v, float $total = 50): \App\Models\Venda
+    {
+        $venda = \App\Models\Venda::create([
+            'empresa_id' => $this->admin->empresa_id, 'vendedor_id' => $v->id,
+            'subtotal' => $total, 'total' => $total, 'status' => 'concluida',
+        ]);
+        // Venda concluída precisa de item (regra do sistema ao editar).
+        \App\Models\VendaItem::create(['venda_id' => $venda->id, 'nome' => 'Item', 'preco' => $total, 'quantidade' => 1]);
+
+        return $venda;
+    }
+
+    public function test_vendedora_edita_e_apaga_so_as_proprias_vendas(): void
+    {
+        [$ana] = $this->criarVendedora();
+        $anaVendedor = Vendedor::find($ana);
+        $outra = Vendedor::create(['empresa_id' => $this->admin->empresa_id, 'nome' => 'Outra']);
+        $minha = $this->vendaDe($anaVendedor);
+        $alheia = $this->vendaDe($outra);
+
+        Sanctum::actingAs(User::where('email', 'ana@loja.com')->first());
+
+        // Edita a própria (e não consegue passá-la para outro vendedor).
+        $this->putJson("/api/vendas/{$minha->id}", ['vendedor_id' => $outra->id, 'status' => 'concluida', 'desconto_percent' => 10])
+            ->assertOk()
+            ->assertJsonPath('vendedorId', $ana)
+            ->assertJsonPath('total', 45);
+
+        // A dos outros: nada de editar nem apagar.
+        $this->putJson("/api/vendas/{$alheia->id}", ['vendedor_id' => $outra->id, 'status' => 'cancelada'])->assertForbidden();
+        $this->deleteJson("/api/vendas/{$alheia->id}")->assertForbidden();
+        $this->assertDatabaseHas('vendas', ['id' => $alheia->id, 'status' => 'concluida']);
+
+        // Apaga a própria.
+        $this->deleteJson("/api/vendas/{$minha->id}")->assertNoContent();
+        $this->assertDatabaseMissing('vendas', ['id' => $minha->id]);
+    }
+
+    public function test_dono_continua_alterando_qualquer_venda(): void
+    {
+        $outra = Vendedor::create(['empresa_id' => $this->admin->empresa_id, 'nome' => 'Outra']);
+        $venda = $this->vendaDe($outra);
+        Sanctum::actingAs($this->admin);
+
+        $this->putJson("/api/vendas/{$venda->id}", ['vendedor_id' => $outra->id, 'status' => 'cancelada'])->assertOk();
+        $this->deleteJson("/api/vendas/{$venda->id}")->assertNoContent();
+    }
+
+    public function test_vendedora_le_a_empresa_para_o_recibo_mas_nao_altera(): void
+    {
+        $this->criarVendedora();
+        Sanctum::actingAs(User::where('email', 'ana@loja.com')->first());
+
+        $this->getJson('/api/empresa')->assertOk()->assertJsonPath('razao_social', 'X');
+        $this->putJson('/api/empresa', ['razao_social' => 'Hackeada'])->assertForbidden();
+        $this->getJson('/api/comissoes')->assertForbidden();
     }
 }

@@ -39,13 +39,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('clientes', ClienteController::class)->except(['destroy']);
     Route::apiResource('pedidos-compra', PedidoCompraController::class)
         ->parameters(['pedidos-compra' => 'pedidoCompra']);
-    Route::apiResource('vendas', VendaController::class)->only(['index', 'store', 'show']);
+    // Todos veem as vendas; editar/excluir é restrito às próprias (VendaController).
+    Route::apiResource('vendas', VendaController::class)->only(['index', 'store', 'show', 'update', 'destroy']);
     Route::get('/comissao', [ComissaoController::class, 'show']);
+    // Dados da empresa só para leitura (cabeçalho do recibo).
+    Route::get('/empresa', [EmpresaController::class, 'show']);
 
     Route::middleware('somente.admin')->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'overview']);
 
-        Route::get('/empresa', [EmpresaController::class, 'show']);
         Route::put('/empresa', [EmpresaController::class, 'update']);
         Route::post('/empresa/logo', [EmpresaController::class, 'uploadLogo']);
 
@@ -69,7 +71,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/clientes/{cliente}', [ClienteController::class, 'destroy']);
         Route::apiResource('fornecedores', FornecedorController::class)->parameters(['fornecedores' => 'fornecedor']);
 
-        Route::apiResource('vendas', VendaController::class)->only(['update', 'destroy']);
+        Route::get('/comissoes', [ComissaoController::class, 'index']);
         Route::apiResource('devolucoes', DevolucaoController::class)
             ->only(['index', 'store', 'update'])
             ->parameters(['devolucoes' => 'devolucao']);

@@ -12,6 +12,11 @@ export function getVendas({ vendedorId, dataInicio, dataFim } = {}) {
   })
 }
 
+// Quanto pagar aos vendedores no período (comissão + vale + bônus de meta).
+export function getComissoes({ inicio, fim }) {
+  return http.get('/comissoes', { params: { tipo: 'periodo', inicio, fim } })
+}
+
 export function getVenda(id) {
   return http.get(`/vendas/${id}`)
 }

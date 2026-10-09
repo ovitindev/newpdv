@@ -14,12 +14,8 @@ class VendaController extends Controller
 {
     public function index(Request $request)
     {
-        // Vendedora só enxerga as próprias vendas, ignorando o filtro enviado.
-        $meuVendedor = $request->user()->vendedor;
-
         return Venda::with(['cliente', 'vendedor', 'itens', 'pagamentos'])
-            ->when($meuVendedor, fn ($query) => $query->where('vendedor_id', $meuVendedor->id))
-            ->when(! $meuVendedor && $request->filled('vendedor_id'), fn ($query) => $query->where('vendedor_id', $request->vendedor_id))
+            ->when($request->filled('vendedor_id'), fn ($query) => $query->where('vendedor_id', $request->vendedor_id))
             ->when($request->data_inicio, fn ($query, $data) => $query->whereDate('created_at', '>=', $data))
             ->when($request->data_fim, fn ($query, $data) => $query->whereDate('created_at', '<=', $data))
             ->latest()
@@ -150,16 +146,19 @@ class VendaController extends Controller
         );
     }
 
-    public function show(Request $request, Venda $venda)
+    public function show(Venda $venda)
     {
-        $meuVendedor = $request->user()->vendedor;
-        abort_if($meuVendedor && $venda->vendedor_id !== $meuVendedor->id, 404);
-
         return $this->presentDetail($venda->load(['cliente', 'vendedor', 'itens', 'pagamentos', 'operador']));
     }
 
     public function update(Request $request, Venda $venda)
     {
+        $this->autorizarAlteracao($request, $venda);
+        // Vendedora não passa a venda pra outra pessoa.
+        if ($meuVendedor = $request->user()->vendedor) {
+            $request->merge(['vendedor_id' => $meuVendedor->id]);
+        }
+
         $data = $request->validate([
             'cliente_id' => ['nullable', 'exists:clientes,id'],
             'vendedor_id' => ['required', 'exists:vendedores,id'],
@@ -210,8 +209,10 @@ class VendaController extends Controller
         return $this->presentDetail($venda->load(['cliente', 'vendedor', 'itens', 'pagamentos', 'operador']));
     }
 
-    public function destroy(Venda $venda)
+    public function destroy(Request $request, Venda $venda)
     {
+        $this->autorizarAlteracao($request, $venda);
+
         // A nota fiscal só se desliga da venda (nullOnDelete) — apagar a venda
         // deixaria uma nota autorizada na SEFAZ sem venda correspondente.
         if ($venda->notasFiscais()->where('status', 'autorizada')->exists()) {
@@ -232,6 +233,13 @@ class VendaController extends Controller
         });
 
         return response()->noContent();
+    }
+
+    /** Vendedora só altera as próprias vendas; quem não é vendedor (dono) altera todas. */
+    private function autorizarAlteracao(Request $request, Venda $venda): void
+    {
+        $meuVendedor = $request->user()->vendedor;
+        abort_if($meuVendedor && $venda->vendedor_id !== $meuVendedor->id, 403, 'Você só pode alterar as suas próprias vendas.');
     }
 
     /** Devolve (cancelamento) ou desconta de novo (reativação) o estoque dos itens com produto cadastrado. */

@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
-import { getVendas } from '@/services/vendasService'
+import { getVendas, getComissoes } from '@/services/vendasService'
 import { getVendedores } from '@/services/configuracoesService'
 import { useVendasTotais } from '@/composables/useVendasTotais'
 import StatCard from '@/components/ui/StatCard.vue'
@@ -18,6 +18,7 @@ const loading = ref(true)
 const vendas = ref([])
 const vendedores = ref([])
 
+const remuneracao = ref(null)
 const vendedorId = ref('')
 const dataInicio = ref('')
 const dataFim = ref('')
@@ -25,12 +26,11 @@ const periodoAtivo = ref('semana')
 
 const toISODate = localISODate
 
-// Segunda-feira como início da semana (padrão comercial no Brasil)
+// Semana de domingo a sábado (mesma regra do vale e da meta dos vendedores)
 function startOfWeek(date) {
   const d = new Date(date)
   const dia = d.getDay()
-  const diff = dia === 0 ? -6 : 1 - dia
-  d.setDate(d.getDate() + diff)
+  d.setDate(d.getDate() - dia)
   return d
 }
 
@@ -64,13 +64,13 @@ let requisicaoAtual = 0
 async function carregar() {
   const minhaRequisicao = ++requisicaoAtual
   loading.value = true
-  const resultado = await getVendas({
-    vendedorId: vendedorId.value || undefined,
-    dataInicio: dataInicio.value,
-    dataFim: dataFim.value,
-  })
+  const [resultado, pagamento] = await Promise.all([
+    getVendas({ vendedorId: vendedorId.value || undefined, dataInicio: dataInicio.value, dataFim: dataFim.value }),
+    getComissoes({ inicio: dataInicio.value, fim: dataFim.value }).catch(() => null),
+  ])
   if (minhaRequisicao !== requisicaoAtual) return
   vendas.value = resultado
+  remuneracao.value = pagamento
   loading.value = false
 }
 
@@ -96,10 +96,23 @@ const vendedorOptions = computed(() => [
 const vendedorSelecionado = computed(() => vendedores.value.find((v) => String(v.id) === String(vendedorId.value)) ?? null)
 
 const { vendasConcluidas, totalVendido, totalFrete, quantidadeVendas, ticketMedio } = useVendasTotais(vendas)
-// Frete é repassado ao entregador, não é venda do vendedor — não entra na base de comissão.
-const comissaoEstimada = computed(() =>
-  vendedorSelecionado.value ? (totalVendido.value - totalFrete.value) * (Number(vendedorSelecionado.value.comissao) / 100) : 0,
+// Remuneração calculada pelo servidor (comissão + vale semanal + bônus de meta).
+// Frete é repassado ao entregador: não entra na comissão nem na meta.
+const linhasRemuneracao = computed(() =>
+  (remuneracao.value?.vendedores ?? [])
+    .filter((l) => !vendedorId.value || String(l.vendedor.id) === String(vendedorId.value))
+    .filter((l) => l.totais.vendas > 0 || l.totais.total > 0)
+    .map((l) => ({ id: l.vendedor.id, vendedor: l.vendedor.nome, regras: l.regras, ...l.totais, semanas: l.semanas })),
 )
+const totalRemuneracao = computed(() => linhasRemuneracao.value.reduce((s, l) => s + l.total, 0))
+const colunasRemuneracao = [
+  { key: 'vendedor', label: 'Vendedor' },
+  { key: 'vendas', label: 'Vendas (sem frete)', align: 'right' },
+  { key: 'comissao', label: 'Comissão', align: 'right' },
+  { key: 'vale', label: 'Vale semanal', align: 'right' },
+  { key: 'bonus', label: 'Bônus de meta', align: 'right' },
+  { key: 'total', label: 'A pagar', align: 'right' },
+]
 
 function formatPeriodoISO(iso) {
   if (!iso) return ''
@@ -168,15 +181,32 @@ const columns = [
         <StatCard label="Vendas concluídas" :value="quantidadeVendas" icon="ShoppingBag" />
         <StatCard label="Ticket médio" :value="ticketMedio" type="currency" icon="Receipt" />
         <StatCard label="Total de frete (entrega)" :value="totalFrete" type="currency" icon="Truck" />
-        <StatCard
-          v-if="vendedorSelecionado"
-          label="Comissão estimada"
-          :value="comissaoEstimada"
-          type="currency"
-          icon="PiggyBank"
-        />
+        <StatCard label="A pagar aos vendedores" :value="totalRemuneracao" type="currency" icon="PiggyBank" />
       </template>
     </div>
+
+    <Card title="Remuneração dos vendedores" :padded="false" class="p-5 sm:p-6">
+      <p class="mb-4 text-sm text-ink-soft">
+        Comissão sobre as vendas (sem o frete) + vale fixo por semana + bônus quando a semana passa da meta.
+        A semana vai de domingo a sábado e conta no período em que cai o domingo dela.
+      </p>
+      <Table :columns="colunasRemuneracao" :rows="linhasRemuneracao" :loading="loading" empty-title="Nenhuma remuneração no período">
+        <template #cell-vendedor="{ row }">
+          <span class="font-medium text-ink">{{ row.vendedor }}</span>
+          <span class="block text-xs text-ink-faint">
+            {{ row.regras.percentual }}%<template v-if="row.regras.valeSemanal"> + {{ formatCurrency(row.regras.valeSemanal) }}/sem</template><template v-if="row.regras.metaSemanal"> · meta {{ formatCurrency(row.regras.metaSemanal) }} = +{{ formatCurrency(row.regras.bonusMeta) }}</template>
+          </span>
+        </template>
+        <template #cell-vendas="{ value }">{{ formatCurrency(value) }}</template>
+        <template #cell-comissao="{ value }">{{ formatCurrency(value) }}</template>
+        <template #cell-vale="{ value }">{{ formatCurrency(value) }}</template>
+        <template #cell-bonus="{ value }"><span :class="value > 0 ? 'font-medium text-brand-700' : 'text-ink-faint'">{{ formatCurrency(value) }}</span></template>
+        <template #cell-total="{ value }"><span class="font-semibold text-ink">{{ formatCurrency(value) }}</span></template>
+      </Table>
+      <div v-if="linhasRemuneracao.length" class="mt-4 flex justify-end border-t border-border pt-3 text-sm">
+        <span class="text-ink-soft">Total a pagar no período:&nbsp;</span><span class="font-semibold text-ink">{{ formatCurrency(totalRemuneracao) }}</span>
+      </div>
+    </Card>
 
     <ChartCard title="Vendas por dia" :subtitle="periodoLabel">
       <Skeleton v-if="loading" height="280px" rounded="12px" />

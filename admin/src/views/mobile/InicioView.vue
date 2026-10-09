@@ -1,14 +1,11 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { TrendingUp, Receipt, ShoppingBag, ChevronRight, PackageCheck, Hourglass } from '@lucide/vue'
+import { TrendingUp, Receipt, ShoppingBag, ChevronRight } from '@lucide/vue'
 import { getVendas } from '@/services/vendasService'
-import { getPedidosCompra } from '@/services/pedidosCompraService'
 import { useAuthStore } from '@/stores/auth'
 import { formatCurrency, localISODate } from '@/utils/format'
 import GanhosCard from '@/components/mobile/GanhosCard.vue'
 
-const router = useRouter()
 const auth = useAuthStore()
 
 const periodos = [
@@ -18,7 +15,6 @@ const periodos = [
 ]
 const periodo = ref('hoje')
 const vendas = ref([])
-const pedidos = ref([])
 const loading = ref(true)
 
 function intervalo(id) {
@@ -38,7 +34,9 @@ async function carregar() {
   const minha = ++requisicao
   loading.value = true
   try {
-    const lista = await getVendas(intervalo(periodo.value))
+    // Início é só dela: total, ticket e últimas vendas ignoram as dos colegas
+    // (que ficam na aba Vendas). Para o dono, no app, sem filtro.
+    const lista = await getVendas({ ...intervalo(periodo.value), vendedorId: auth.vendedor?.id })
     if (minha === requisicao) vendas.value = lista
   } finally {
     if (minha === requisicao) loading.value = false
@@ -50,10 +48,7 @@ function trocar(id) {
   carregar()
 }
 
-onMounted(() => {
-  carregar()
-  getPedidosCompra().then((l) => (pedidos.value = l)).catch(() => {})
-})
+onMounted(carregar)
 
 const concluidas = computed(() => vendas.value.filter((v) => v.status === 'concluida'))
 const total = computed(() => concluidas.value.reduce((s, v) => s + v.total, 0))
@@ -78,8 +73,6 @@ const barras = computed(() => {
 })
 
 const recentes = computed(() => vendas.value.slice(0, 4))
-const pendentes = computed(() => pedidos.value.filter((p) => p.status === 'pendente').length)
-const disponiveis = computed(() => pedidos.value.filter((p) => p.status === 'disponivel').length)
 
 const hora = (d) => new Date(d).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
 </script>
@@ -131,21 +124,10 @@ const hora = (d) => new Date(d).toLocaleTimeString('pt-BR', { hour: '2-digit', m
       </div>
     </section>
 
-    <div class="grid grid-cols-2 gap-3">
-      <button class="flex items-center gap-3 rounded-2xl bg-white p-4 text-left shadow-soft active:bg-surface" @click="router.push('/app/pedidos')">
-        <span class="flex size-10 items-center justify-center rounded-xl bg-warning-soft text-warning"><Hourglass :size="20" /></span>
-        <span><span class="block text-xl font-semibold text-ink">{{ pendentes }}</span><span class="text-xs text-ink-soft">pedidos a comprar</span></span>
-      </button>
-      <button class="flex items-center gap-3 rounded-2xl bg-white p-4 text-left shadow-soft active:bg-surface" @click="router.push('/app/pedidos')">
-        <span class="flex size-10 items-center justify-center rounded-xl bg-brand-50 text-brand-600"><PackageCheck :size="20" /></span>
-        <span><span class="block text-xl font-semibold text-ink">{{ disponiveis }}</span><span class="text-xs text-ink-soft">prontos p/ entregar</span></span>
-      </button>
-    </div>
-
     <section>
       <div class="mb-2 flex items-center justify-between px-1">
         <h2 class="text-sm font-semibold text-ink">Últimas vendas</h2>
-        <router-link to="/app/vendas" class="text-sm font-medium text-brand-700">Ver todas</router-link>
+        <router-link to="/app/vendas" class="text-sm font-medium text-brand-700">Ver vendas</router-link>
       </div>
       <ul v-if="recentes.length" class="divide-y divide-border overflow-hidden rounded-2xl bg-white shadow-soft">
         <li v-for="v in recentes" :key="v.id" class="flex items-center gap-3 px-4 py-3">

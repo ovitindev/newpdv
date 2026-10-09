@@ -109,6 +109,23 @@ class ComissaoTest extends TestCase
         $this->getJson('/api/comissao')->assertUnprocessable();
     }
 
+    public function test_frete_nao_entra_na_comissao_nem_na_meta(): void
+    {
+        $v = $this->vendedora();
+        // R$ 3.050 no total, mas R$ 100 são frete: vendas = 2.950, abaixo da meta de 3.000.
+        $venda = Venda::create([
+            'empresa_id' => $this->admin->empresa_id, 'vendedor_id' => $v->id,
+            'subtotal' => 2950, 'entrega' => true, 'valor_frete' => 100, 'total' => 3050, 'status' => 'concluida',
+        ]);
+        $venda->forceFill(['created_at' => '2026-10-06 10:00:00'])->save();
+
+        Sanctum::actingAs(User::where('email', 'ana@loja.com')->first());
+        $this->getJson('/api/comissao')
+            ->assertJsonPath('totais.vendas', 2950)
+            ->assertJsonPath('totais.comissao', 88.5)
+            ->assertJsonPath('totais.bonus', 0);
+    }
+
     public function test_semana_vai_de_domingo_a_sabado(): void
     {
         $v = $this->vendedora();
@@ -125,5 +142,21 @@ class ComissaoTest extends TestCase
         $this->getJson('/api/comissao?tipo=semana&ref=2026-10-03')
             ->assertJsonPath('semanas.0.inicio', '2026-09-27')
             ->assertJsonPath('totais.vendas', 100);
+    }
+
+    public function test_dono_ve_todos_os_vendedores_num_periodo_livre(): void
+    {
+        $ana = $this->vendedora();
+        $outra = Vendedor::create(['empresa_id' => $this->admin->empresa_id, 'nome' => 'Bia', 'comissao' => 5]);
+        $this->venda($ana, 3500, '2026-10-06 10:00:00'); // bate a meta
+        $this->venda($outra, 1000, '2026-10-07 10:00:00');
+        Sanctum::actingAs($this->admin);
+
+        $r = $this->getJson('/api/comissoes?tipo=periodo&inicio=2026-10-01&fim=2026-10-09')->assertOk();
+        $r->assertJsonCount(2, 'vendedores')
+            ->assertJsonPath('vendedores.0.vendedor.nome', 'Ana')
+            ->assertJsonPath('vendedores.0.totais.total', 185)  // 105 + 30 + 50
+            ->assertJsonPath('vendedores.1.totais.total', 50)   // 5% de 1000, sem vale
+            ->assertJsonPath('totais.total', 235);
     }
 }

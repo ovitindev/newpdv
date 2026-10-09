@@ -2,7 +2,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import {
   Search, ScanLine, Plus, Minus, Trash2, PackagePlus, ShoppingBag, Truck, Banknote, QrCode, CreditCard,
-  CircleCheck, MessageCircle, X, Tag,
+  CircleCheck, FileText, X, Tag,
 } from '@lucide/vue'
 import { getProdutos } from '@/services/produtosService'
 import { getVendedores } from '@/services/configuracoesService'
@@ -11,11 +11,12 @@ import { useAuthStore } from '@/stores/auth'
 import { useCartStore } from '@/stores/cart'
 import { useToastStore } from '@/stores/toast'
 import { formatCurrency } from '@/utils/format'
-import { whatsappLink } from '@/utils/whatsapp'
+import { reciboDeVenda } from '@/utils/recibo'
 import BottomSheet from '@/components/mobile/BottomSheet.vue'
 import ClientePicker from '@/components/mobile/ClientePicker.vue'
 import BarcodeScanner from '@/components/mobile/BarcodeScanner.vue'
 import MoneyField from '@/components/mobile/MoneyField.vue'
+import ReciboSheet from '@/components/mobile/ReciboSheet.vue'
 
 const auth = useAuthStore()
 const cart = useCartStore()
@@ -218,7 +219,7 @@ async function finalizar() {
       })),
       pagamentos: pagamentos.map((p) => ({ metodo: p.method, valor: p.valor, parcelas: p.parcelas })),
     })
-    vendaConcluida.value = { ...venda, itens, pagamentos, cliente, troco: pagamentos.some((p) => p.method === 'dinheiro') ? trocoVenda.value : 0 }
+    vendaConcluida.value = { ...venda, recibo: reciboDeVenda(venda, { cliente }), itens, pagamentos, cliente, troco: pagamentos.some((p) => p.method === 'dinheiro') ? trocoVenda.value : 0 }
     for (const i of itens) {
       if (i.avulso) continue
       const p = produtos.value.find((x) => x.id === i.id)
@@ -234,24 +235,7 @@ async function finalizar() {
   }
 }
 
-function recibo(v) {
-  const linhas = v.itens.map((i) => `• ${i.quantidade}x ${i.nome} — ${formatCurrency(i.preco * i.quantidade)}`)
-  const extra = []
-  if (v.descontoValor) extra.push(`Desconto: -${formatCurrency(v.descontoValor)}`)
-  if (v.valorFrete) extra.push(`Frete: ${formatCurrency(v.valorFrete)}`)
-  return [
-    `*${auth.empresa?.nome_fantasia ?? 'NovaPDV'}*`,
-    `Recibo da venda #${v.id}`,
-    '',
-    ...linhas,
-    ...extra,
-    '',
-    `*Total: ${formatCurrency(v.total)}*`,
-    v.pagamentos.map((p) => `${metodoLabel[p.method]}${p.method === 'credito' && p.parcelas > 1 ? ` ${p.parcelas}x` : ''}: ${formatCurrency(p.valor)}`).join(' | '),
-    '',
-    'Obrigada pela preferência!',
-  ].join('\n')
-}
+const reciboAberto = ref(false)
 
 function novaVenda() {
   carrinhoAberto.value = false
@@ -471,10 +455,11 @@ const tituloSheet = computed(() => ({ carrinho: 'Carrinho', pagamento: 'Pagament
           <button :disabled="cart.restante > 0.005 || finalizando" class="h-14 flex-[2] rounded-2xl bg-brand-600 text-base font-semibold text-white active:bg-brand-700 disabled:opacity-50" @click="finalizar">{{ finalizando ? 'Finalizando...' : 'Finalizar venda' }}</button>
         </div>
         <div v-else class="space-y-2.5">
-          <a :href="whatsappLink(vendaConcluida?.cliente?.telefone, recibo(vendaConcluida))" target="_blank" rel="noopener" class="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-[#25D366] font-semibold text-white active:opacity-90"><MessageCircle :size="20" />Enviar recibo no WhatsApp</a>
+          <button class="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-brand-50 font-semibold text-brand-700 ring-1 ring-brand-200 active:bg-brand-100" @click="reciboAberto = true"><FileText :size="20" />Recibo em PDF</button>
           <button class="h-14 w-full rounded-2xl bg-brand-600 font-semibold text-white active:bg-brand-700" @click="novaVenda">Nova venda</button>
         </div>
       </template>
     </BottomSheet>
+    <ReciboSheet v-model="reciboAberto" :recibo="vendaConcluida?.recibo" />
   </div>
 </template>

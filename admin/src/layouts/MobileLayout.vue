@@ -11,11 +11,8 @@ const router = useRouter()
 const auth = useAuthStore()
 const empresaStore = useEmpresaStore()
 
-// Admin entrando pelo app não tem permissão pra /empresa em vendedor, mas aqui
-// o carregamento só é pedido pra quem pode (a vendedora usa o nome vindo do /me).
-onMounted(() => {
-  if (!auth.ehVendedor) empresaStore.carregar()
-})
+// Dados da empresa (cabeçalho do recibo); a vendedora só consegue ler, não alterar.
+onMounted(() => empresaStore.carregar())
 
 const tabs = [
   { to: '/app', name: 'app-inicio', label: 'Início', icon: House },
