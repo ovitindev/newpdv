@@ -12,6 +12,8 @@ export const useAuthStore = defineStore('auth', {
   }),
   getters: {
     isAuthenticated: (state) => Boolean(state.token && state.user),
+    vendedor: (state) => state.user?.vendedor ?? null,
+    ehVendedor: (state) => Boolean(state.user?.vendedor),
     firstName: (state) => state.user?.nome?.split(' ')[0] ?? '',
     greeting: () => {
       const hour = new Date().getHours()
@@ -56,6 +58,9 @@ export const useAuthStore = defineStore('auth', {
       localStorage.setItem(TOKEN_KEY, data.token)
     },
     clearSession() {
+      for (const chave of Object.keys(localStorage)) {
+        if (chave.startsWith('novapdv_cart_')) localStorage.removeItem(chave)
+      }
       this.token = null
       this.user = null
       this.empresa = null

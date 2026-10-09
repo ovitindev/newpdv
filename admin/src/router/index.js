@@ -9,6 +9,17 @@ const routes = [
     meta: { title: 'Entrar' },
   },
   {
+    path: '/app',
+    component: () => import('@/layouts/MobileLayout.vue'),
+    children: [
+      { path: '', name: 'app-inicio', component: () => import('@/views/mobile/InicioView.vue'), meta: { title: 'Início' } },
+      { path: 'vender', name: 'app-vender', component: () => import('@/views/mobile/VenderView.vue'), meta: { title: 'Nova venda' } },
+      { path: 'vendas', name: 'app-vendas', component: () => import('@/views/mobile/VendasView.vue'), meta: { title: 'Vendas' } },
+      { path: 'pedidos', name: 'app-pedidos', component: () => import('@/views/mobile/PedidosView.vue'), meta: { title: 'Pedidos' } },
+      { path: 'clientes', name: 'app-clientes', component: () => import('@/views/mobile/ClientesView.vue'), meta: { title: 'Clientes' } },
+    ],
+  },
+  {
     path: '/',
     component: () => import('@/layouts/AdminLayout.vue'),
     children: [
@@ -234,8 +245,13 @@ router.beforeEach(async (to) => {
     return { name: 'login', query: { redirect: to.fullPath } }
   }
 
+  // Vendedora só usa o app mobile (e a API também bloqueia o resto).
+  if (authStore.ehVendedor && !to.path.startsWith('/app') && to.name !== 'login') {
+    return { name: 'app-inicio' }
+  }
+
   if (to.name === 'login' && authStore.isAuthenticated) {
-    return { name: 'dashboard' }
+    return { name: authStore.ehVendedor ? 'app-inicio' : 'dashboard' }
   }
 })
 

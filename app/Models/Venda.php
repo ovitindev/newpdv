@@ -12,7 +12,7 @@ class Venda extends Model
     use BelongsToEmpresa;
 
     protected $fillable = [
-        'empresa_id', 'cliente_id', 'vendedor_id', 'user_id',
+        'empresa_id', 'client_uuid', 'cliente_id', 'vendedor_id', 'user_id',
         'subtotal', 'desconto_percent', 'desconto_valor', 'total', 'status',
         'entrega', 'valor_frete',
     ];

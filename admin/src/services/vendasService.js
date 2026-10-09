@@ -31,3 +31,7 @@ export function deleteVenda(id) {
 export function getDevolucoes() {
   return mockRequest(devolucoes)
 }
+
+export function getComissao({ tipo = 'semana', ref, vendedorId } = {}) {
+  return http.get('/comissao', { params: { tipo, ref: ref || undefined, vendedor_id: vendedorId || undefined } })
+}

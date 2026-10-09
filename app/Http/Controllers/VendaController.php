@@ -14,8 +14,12 @@ class VendaController extends Controller
 {
     public function index(Request $request)
     {
+        // Vendedora só enxerga as próprias vendas, ignorando o filtro enviado.
+        $meuVendedor = $request->user()->vendedor;
+
         return Venda::with(['cliente', 'vendedor', 'itens', 'pagamentos'])
-            ->when($request->vendedor_id, fn ($query, $vendedorId) => $query->where('vendedor_id', $vendedorId))
+            ->when($meuVendedor, fn ($query) => $query->where('vendedor_id', $meuVendedor->id))
+            ->when(! $meuVendedor && $request->filled('vendedor_id'), fn ($query) => $query->where('vendedor_id', $request->vendedor_id))
             ->when($request->data_inicio, fn ($query, $data) => $query->whereDate('created_at', '>=', $data))
             ->when($request->data_fim, fn ($query, $data) => $query->whereDate('created_at', '<=', $data))
             ->latest()
@@ -25,7 +29,17 @@ class VendaController extends Controller
 
     public function store(Request $request)
     {
+        // Vendedora logada vende sempre em nome dela; o vendedor_id do request é
+        // ignorado pra ela não lançar venda no nome de outra pessoa.
+        if ($meuVendedor = $request->user()->vendedor) {
+            $request->merge(['vendedor_id' => $meuVendedor->id]);
+        }
+
         $data = $request->validate([
+            // Gerado pelo app a cada tentativa de fechar a venda: se a resposta se
+            // perder (sinal ruim) e a vendedora tentar de novo, devolve a mesma
+            // venda em vez de lançar outra.
+            'client_uuid' => ['nullable', 'uuid'],
             'cliente_id' => ['nullable', 'exists:clientes,id'],
             'vendedor_id' => ['required', 'exists:vendedores,id'],
             'desconto_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
@@ -46,6 +60,15 @@ class VendaController extends Controller
             'pagamentos.*.valor' => ['required', 'numeric', 'min:0.01'],
             'pagamentos.*.parcelas' => ['nullable', 'integer', 'min:1', 'max:12'],
         ]);
+
+        if (! empty($data['client_uuid'])) {
+            $existente = Venda::where('client_uuid', $data['client_uuid'])->first();
+            if ($existente) {
+                return response()->json(
+                    $this->presentDetail($existente->load(['cliente', 'vendedor', 'itens', 'pagamentos', 'operador']))
+                );
+            }
+        }
 
         $temFreteAvulso = ($data['entrega'] ?? false) && ($data['valor_frete'] ?? 0) > 0;
         if (empty($data['itens']) && ! $temFreteAvulso) {
@@ -70,6 +93,7 @@ class VendaController extends Controller
 
         $venda = DB::transaction(function () use ($data, $request, $subtotal, $descontoPercent, $descontoValor, $entrega, $valorFrete, $total) {
             $venda = Venda::create([
+                'client_uuid' => $data['client_uuid'] ?? null,
                 'cliente_id' => $data['cliente_id'] ?? null,
                 'vendedor_id' => $data['vendedor_id'],
                 'user_id' => $request->user()->id,
@@ -126,8 +150,11 @@ class VendaController extends Controller
         );
     }
 
-    public function show(Venda $venda)
+    public function show(Request $request, Venda $venda)
     {
+        $meuVendedor = $request->user()->vendedor;
+        abort_if($meuVendedor && $venda->vendedor_id !== $meuVendedor->id, 404);
+
         return $this->presentDetail($venda->load(['cliente', 'vendedor', 'itens', 'pagamentos', 'operador']));
     }
 

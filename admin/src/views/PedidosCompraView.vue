@@ -1,12 +1,13 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { Plus, ArrowRight, Trash2, Pencil, UserRound, Package, Ban } from '@lucide/vue'
+import { Plus, ArrowRight, Trash2, Pencil, UserRound, Package, Ban, X, UserPlus } from '@lucide/vue'
 import {
   getPedidosCompra,
   createPedidoCompra,
   updatePedidoCompra,
   deletePedidoCompra,
 } from '@/services/pedidosCompraService'
+import { getClientes } from '@/services/clientesService'
 import { useToastStore } from '@/stores/toast'
 import { usePagination } from '@/utils/usePagination'
 import Card from '@/components/ui/Card.vue'
@@ -27,6 +28,7 @@ const loading = ref(true)
 const pedidos = ref([])
 const search = ref('')
 const statusFilter = ref('')
+const clientes = ref([])
 
 const statusOptions = [
   { value: '', label: 'Todos os status' },
@@ -48,11 +50,16 @@ async function carregar() {
   loading.value = false
 }
 
-onMounted(carregar)
+onMounted(() => {
+  carregar()
+  getClientes().then((lista) => (clientes.value = lista))
+})
+
+const nomeCliente = (p) => p.cliente?.nome ?? p.cliente_nome
 
 const filtered = computed(() =>
   pedidos.value.filter((p) => {
-    const alvo = `${p.cliente_nome ?? ''} ${p.descricao}`.toLowerCase()
+    const alvo = `${nomeCliente(p) ?? ''} ${p.descricao}`.toLowerCase()
     const matchesSearch = !search.value || alvo.includes(search.value.toLowerCase())
     const matchesStatus = !statusFilter.value || p.status === statusFilter.value
     return matchesSearch && matchesStatus
@@ -89,7 +96,7 @@ async function cancelar(pedido) {
   try {
     const atualizado = await updatePedidoCompra(pedido.id, { status: 'cancelado' })
     Object.assign(pedido, atualizado)
-    toast.info('Pedido cancelado', `${pedido.cliente_nome ?? 'Necessidade interna'} marcado como cancelado.`)
+    toast.info('Pedido cancelado', `${nomeCliente(pedido) ?? 'Necessidade interna'} marcado como cancelado.`)
   } catch (error) {
     toast.error('Não foi possível cancelar o pedido', error.message)
   }
@@ -105,6 +112,19 @@ async function excluir(pedido) {
   }
 }
 
+const resultadosBusca = computed(() => {
+  const q = form.value.buscaCliente.trim().toLowerCase()
+  if (!q) return []
+  return clientes.value
+    .filter((c) => `${c.nome} ${c.telefone ?? ''}`.toLowerCase().includes(q))
+    .slice(0, 5)
+})
+
+function escolherCliente(c) {
+  form.value.clienteSel = c
+  form.value.buscaCliente = ''
+}
+
 const modalOpen = ref(false)
 const salvando = ref(false)
 const editando = ref(null)
@@ -113,8 +133,12 @@ const form = ref(formVazio())
 function formVazio() {
   return {
     ehCliente: true,
-    cliente_nome: '',
-    cliente_contato: '',
+    modoCliente: 'buscar', // buscar | novo
+    clienteSel: null,
+    buscaCliente: '',
+    novoNome: '',
+    novoTelefone: '',
+    legado: null,
     descricao: '',
     quantidade: 1,
     status: 'pendente',
@@ -131,9 +155,14 @@ function abrirNovo() {
 function abrirEdicao(pedido) {
   editando.value = pedido
   form.value = {
-    ehCliente: Boolean(pedido.cliente_nome),
-    cliente_nome: pedido.cliente_nome ?? '',
-    cliente_contato: pedido.cliente_contato ?? '',
+    ehCliente: Boolean(pedido.cliente_id || pedido.cliente_nome),
+    modoCliente: 'buscar',
+    clienteSel: pedido.cliente ?? null,
+    buscaCliente: '',
+    novoNome: '',
+    novoTelefone: '',
+    // Pedido antigo, anotado só com texto livre: ainda não tem cadastro.
+    legado: !pedido.cliente && pedido.cliente_nome ? { nome: pedido.cliente_nome, contato: pedido.cliente_contato } : null,
     descricao: pedido.descricao,
     quantidade: pedido.quantidade,
     status: pedido.status,
@@ -147,12 +176,15 @@ async function submit() {
   salvando.value = true
   try {
     const payload = {
-      cliente_nome: form.value.ehCliente ? form.value.cliente_nome || null : null,
-      cliente_contato: form.value.ehCliente ? form.value.cliente_contato || null : null,
+      cliente_id: form.value.ehCliente && form.value.modoCliente === 'buscar' ? form.value.clienteSel?.id ?? null : null,
       descricao: form.value.descricao,
       quantidade: form.value.quantidade || 1,
       status: form.value.status,
       observacoes: form.value.observacoes || null,
+    }
+    if (form.value.ehCliente && form.value.modoCliente === 'novo') {
+      if (!form.value.novoNome.trim()) return toast.error('Informe o nome do cliente')
+      payload.novo_cliente = { nome: form.value.novoNome, telefone: form.value.novoTelefone || null }
     }
     if (editando.value) {
       const atualizado = await updatePedidoCompra(editando.value.id, payload)
@@ -164,6 +196,7 @@ async function submit() {
       toast.success('Pedido anotado')
     }
     modalOpen.value = false
+    if (payload.novo_cliente) getClientes().then((lista) => (clientes.value = lista))
   } catch (error) {
     toast.error('Não foi possível salvar o pedido', error.message)
   } finally {
@@ -195,8 +228,8 @@ async function submit() {
       </div>
 
       <Table :columns="columns" :rows="paginated" :loading="loading" empty-icon="ClipboardList" empty-title="Nenhum pedido anotado">
-        <template #cell-cliente_nome="{ value }">
-          <span v-if="value" class="flex items-center gap-1.5 font-medium text-ink"><UserRound :size="14" class="text-ink-faint" />{{ value }}</span>
+        <template #cell-cliente_nome="{ row }">
+          <span v-if="nomeCliente(row)" class="flex items-center gap-1.5 font-medium text-ink"><UserRound :size="14" class="text-ink-faint" />{{ nomeCliente(row) }}</span>
           <span v-else class="flex items-center gap-1.5 text-ink-soft"><Package :size="14" />Necessidade interna</span>
         </template>
         <template #cell-descricao="{ value }">
@@ -245,8 +278,37 @@ async function submit() {
         </div>
 
         <template v-if="form.ehCliente">
-          <Input v-model="form.cliente_nome" label="Nome do cliente" placeholder="Ex: Maria Silva" />
-          <Input v-model="form.cliente_contato" label="Contato" placeholder="Telefone, WhatsApp..." />
+          <div v-if="form.modoCliente === 'buscar'" class="space-y-2">
+            <p class="text-sm font-medium text-ink">Cliente</p>
+            <div v-if="form.clienteSel" class="flex items-center justify-between rounded-lg border border-border bg-surface px-3 py-2">
+              <div class="min-w-0">
+                <p class="truncate text-sm font-medium text-ink">{{ form.clienteSel.nome }}</p>
+                <p v-if="form.clienteSel.telefone" class="text-xs text-ink-faint">{{ form.clienteSel.telefone }}</p>
+              </div>
+              <button class="flex size-8 items-center justify-center rounded-lg text-ink-faint hover:text-ink" title="Trocar cliente" @click="form.clienteSel = null"><X :size="15" /></button>
+            </div>
+            <template v-else>
+              <p v-if="form.legado" class="text-xs text-ink-faint">Anotado antes como: {{ form.legado.nome }}{{ form.legado.contato ? ' · ' + form.legado.contato : '' }}</p>
+              <SearchInput v-model="form.buscaCliente" placeholder="Buscar cliente por nome ou telefone..." />
+              <div v-if="form.buscaCliente" class="overflow-hidden rounded-lg border border-border">
+                <button v-for="c in resultadosBusca" :key="c.id" class="block w-full px-3 py-2 text-left text-sm hover:bg-surface" @click="escolherCliente(c)">
+                  <span class="font-medium text-ink">{{ c.nome }}</span><span v-if="c.telefone" class="ml-2 text-xs text-ink-faint">{{ c.telefone }}</span>
+                </button>
+                <p v-if="!resultadosBusca.length" class="px-3 py-2 text-sm text-ink-faint">Nenhum cliente encontrado.</p>
+              </div>
+              <button class="inline-flex items-center gap-1.5 text-sm font-medium text-brand-700 hover:underline" @click="form.modoCliente = 'novo'; form.novoNome = form.buscaCliente">
+                <UserPlus :size="14" />Cadastrar novo cliente
+              </button>
+            </template>
+          </div>
+          <div v-else class="space-y-3">
+            <div class="flex items-center justify-between">
+              <p class="text-sm font-medium text-ink">Novo cliente</p>
+              <button class="text-sm text-ink-soft hover:underline" @click="form.modoCliente = 'buscar'">Buscar existente</button>
+            </div>
+            <Input v-model="form.novoNome" label="Nome" placeholder="Ex: Maria Silva" />
+            <Input v-model="form.novoTelefone" label="Telefone / WhatsApp" placeholder="(00) 00000-0000" />
+          </div>
         </template>
 
         <Textarea v-model="form.descricao" label="O que a pessoa quer / o que precisa comprar" placeholder="Ex: Tênis Nike Air, tamanho 42, na cor preta" :rows="3" required />

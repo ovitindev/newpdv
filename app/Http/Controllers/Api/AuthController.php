@@ -113,6 +113,13 @@ class AuthController extends Controller
             'cargo' => $user->cargo,
             'iniciais' => $user->iniciais(),
             'avatarUrl' => $user->avatar_path,
+            // Preenchido = usuário é uma vendedora: usa o app mobile e as
+            // vendas saem automaticamente no nome dela.
+            'vendedor' => $user->vendedor ? [
+                'id' => $user->vendedor->id,
+                'nome' => $user->vendedor->nome,
+                'comissao' => (float) $user->vendedor->comissao,
+            ] : null,
         ];
     }
 }

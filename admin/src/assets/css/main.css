@@ -143,3 +143,20 @@ body {
     width: 100%;
   }
 }
+
+/* iOS dá zoom automático ao focar campos com fonte menor que 16px. */
+@media (max-width: 1023px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/* App instalado (PWA): sem destaque azul no toque e sem "puxar pra atualizar" acidental. */
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+body {
+  overscroll-behavior-y: none;
+}

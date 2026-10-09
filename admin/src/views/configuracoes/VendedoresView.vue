@@ -26,6 +26,7 @@ const filtered = computed(() => vendedores.value.filter((v) => v.nome.toLowerCas
 const columns = [
   { key: 'nome', label: 'Vendedor' },
   { key: 'email', label: 'E-mail' },
+  { key: 'temAcesso', label: 'Acesso ao app' },
   { key: 'comissao', label: 'Comissão', align: 'right' },
   { key: 'status', label: 'Status' },
   { key: 'acoes', label: '', align: 'right' },
@@ -33,17 +34,20 @@ const columns = [
 
 const modalOpen = ref(false)
 const editingId = ref(null)
-const form = ref({ nome: '', email: '', comissao: '' })
+const form = ref({ nome: '', email: '', senha: '', comissao: '', vale_semanal: '', meta_semanal: '', bonus_meta: '' })
+const editingTemAcesso = ref(false)
 
 function openCreate() {
   editingId.value = null
-  form.value = { nome: '', email: '', comissao: '' }
+  editingTemAcesso.value = false
+  form.value = { nome: '', email: '', senha: '', comissao: '', vale_semanal: '', meta_semanal: '', bonus_meta: '' }
   modalOpen.value = true
 }
 
 function openEdit(vendedor) {
   editingId.value = vendedor.id
-  form.value = { nome: vendedor.nome, email: vendedor.email, comissao: vendedor.comissao }
+  editingTemAcesso.value = vendedor.temAcesso
+  form.value = { nome: vendedor.nome, email: vendedor.email ?? '', senha: '', comissao: vendedor.comissao, vale_semanal: Number(vendedor.valeSemanal) || '', meta_semanal: Number(vendedor.metaSemanal) || '', bonus_meta: Number(vendedor.bonusMeta) || '' }
   modalOpen.value = true
 }
 
@@ -55,7 +59,11 @@ async function submit() {
   const payload = {
     nome: form.value.nome,
     email: form.value.email || null,
+    senha: form.value.senha || null,
     comissao: Number(form.value.comissao) || 0,
+    vale_semanal: Number(form.value.vale_semanal) || 0,
+    meta_semanal: Number(form.value.meta_semanal) || 0,
+    bonus_meta: Number(form.value.bonus_meta) || 0,
   }
   try {
     if (editingId.value) {
@@ -109,6 +117,9 @@ async function remove(vendedor) {
             <span class="font-medium text-ink">{{ row.nome }}</span>
           </div>
         </template>
+        <template #cell-temAcesso="{ value }">
+          <Badge :variant="value ? 'brand' : 'neutral'">{{ value ? 'Com login' : 'Sem login' }}</Badge>
+        </template>
         <template #cell-comissao="{ value }"><span class="text-ink-soft">{{ value }}%</span></template>
         <template #cell-status="{ value }">
           <Badge :variant="value === 'ativo' ? 'success' : 'neutral'" dot>{{ value === 'ativo' ? 'Ativo' : 'Inativo' }}</Badge>
@@ -129,8 +140,25 @@ async function remove(vendedor) {
     <Modal v-model="modalOpen" :title="editingId ? 'Editar vendedor' : 'Novo vendedor'" size="sm">
       <div class="space-y-4">
         <Input v-model="form.nome" label="Nome completo" required />
-        <Input v-model="form.email" type="email" label="E-mail" />
-        <Input v-model="form.comissao" type="number" label="Comissão (%)" placeholder="Ex: 2.5" />
+        <Input v-model="form.email" type="email" label="E-mail (login)" />
+        <Input
+          v-model="form.senha"
+          type="password"
+          :label="editingTemAcesso ? 'Nova senha' : 'Senha de acesso ao app'"
+          :placeholder="editingTemAcesso ? 'Deixe em branco para manter a atual' : 'Mínimo 6 caracteres'"
+          autocomplete="new-password"
+        />
+        <p class="-mt-2 text-xs text-ink-faint">Com e-mail e senha, a vendedora entra no app do celular e as vendas saem no nome dela.</p>
+        <div class="rounded-xl border border-border bg-surface/60 p-4 space-y-3">
+          <p class="text-sm font-semibold text-ink">Regras de pagamento</p>
+          <Input v-model="form.comissao" type="number" label="Comissão sobre as vendas (%)" placeholder="Ex: 3" />
+          <Input v-model="form.vale_semanal" type="number" label="Vale fixo por semana (R$)" placeholder="Ex: 30 (vale-gasolina)" />
+          <div class="grid grid-cols-2 gap-3">
+            <Input v-model="form.meta_semanal" type="number" label="Meta da semana (R$)" placeholder="Ex: 3000" />
+            <Input v-model="form.bonus_meta" type="number" label="Bônus da meta (R$)" placeholder="Ex: 50" />
+          </div>
+          <p class="text-xs text-ink-faint">A semana vai de segunda a domingo. O bônus é pago quando as vendas da semana passam da meta. Deixe em branco o que não se aplica.</p>
+        </div>
       </div>
       <template #footer>
         <Button variant="ghost" :disabled="saving" @click="modalOpen = false">Cancelar</Button>
