@@ -26,7 +26,6 @@ RUN install-php-extensions \
     soap \
     zip \
     intl \
-    opcache \
     pcntl \
     exif
 
