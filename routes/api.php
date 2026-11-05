@@ -23,12 +23,11 @@ use App\Http\Controllers\VendaController;
 use App\Http\Controllers\VendedorController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware('throttle:6,1')->group(function () {
-    Route::post('/register', [AuthController::class, 'register']);
-    Route::post('/login', [AuthController::class, 'login']);
-});
+// Não existe cadastro público de empresa/admin: novas empresas são criadas
+// só por quem administra o servidor (seed/tinker), nunca por rota aberta.
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');
 
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'usuario.ativo'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
 

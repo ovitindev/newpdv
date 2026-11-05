@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
@@ -36,6 +37,8 @@ class UsuarioController extends Controller
             'password' => Hash::make($senhaTemporaria),
             'cargo' => $data['cargo'] ?? 'Operador de Caixa',
         ]);
+
+        Log::info('usuario criado', ['usuario_id' => $user->id, 'por_user_id' => Auth::id(), 'ip' => $request->ip()]);
 
         return response()->json($this->present($user), 201);
     }

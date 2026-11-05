@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'somente.admin' => \App\Http\Middleware\SomenteAdmin::class,
+            'usuario.ativo' => \App\Http\Middleware\UsuarioAtivo::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

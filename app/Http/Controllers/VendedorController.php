@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Models\Vendedor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 
 class VendedorController extends Controller
@@ -22,7 +23,7 @@ class VendedorController extends Controller
             // O e-mail só precisa ser único entre usuários quando o vendedor
             // vai ganhar login (senha informada).
             'email' => array_filter(['nullable', 'email', 'max:255', 'required_with:senha', $request->filled('senha') ? Rule::unique('users', 'email') : null]),
-            'senha' => ['nullable', 'string', 'min:6', 'max:100'],
+            'senha' => ['nullable', 'string', 'min:8', 'max:100'],
             'comissao' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'vale_semanal' => ['nullable', 'numeric', 'min:0', 'max:99999'],
             'meta_semanal' => ['nullable', 'numeric', 'min:0', 'max:9999999'],
@@ -48,6 +49,8 @@ class VendedorController extends Controller
             return $vendedor;
         });
 
+        Log::info('vendedor criado', ['vendedor_id' => $vendedor->id, 'por_user_id' => $request->user()->id, 'ip' => $request->ip()]);
+
         return response()->json($this->present($vendedor->load('user:id')), 201);
     }
 
@@ -65,7 +68,7 @@ class VendedorController extends Controller
                 ($vendedor->user_id || $request->filled('senha')) ? Rule::unique('users', 'email')->ignore($vendedor->user_id) : null,
             ]),
             // Em branco ao editar = mantém a senha atual.
-            'senha' => ['nullable', 'string', 'min:6', 'max:100'],
+            'senha' => ['nullable', 'string', 'min:8', 'max:100'],
             'comissao' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'vale_semanal' => ['nullable', 'numeric', 'min:0', 'max:99999'],
             'meta_semanal' => ['nullable', 'numeric', 'min:0', 'max:9999999'],
