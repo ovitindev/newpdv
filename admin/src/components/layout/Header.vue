@@ -113,8 +113,8 @@ async function handleLogout() {
         </button>
       </template>
       <div class="px-1 py-1">
-        <router-link to="/configuracoes/usuarios" class="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-ink hover:bg-surface">
-          <UserRound :size="16" class="text-ink-faint" /> Meu perfil
+        <router-link to="/minha-conta" class="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-ink hover:bg-surface">
+          <UserRound :size="16" class="text-ink-faint" /> Minha conta
         </router-link>
         <router-link to="/configuracoes/empresa" class="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-ink hover:bg-surface">
           <Settings :size="16" class="text-ink-faint" /> Configurações

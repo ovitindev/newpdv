@@ -179,6 +179,12 @@ const routes = [
         component: () => import('@/views/relatorios/FiscalReportView.vue'),
         meta: { title: 'Relatório Fiscal', breadcrumb: ['Relatórios', 'Fiscal'] },
       },
+      {
+        path: 'minha-conta',
+        name: 'minha-conta',
+        component: () => import('@/views/MinhaContaView.vue'),
+        meta: { title: 'Minha conta', breadcrumb: ['Minha conta'] },
+      },
       // Configurações
       {
         path: 'configuracoes/empresa',

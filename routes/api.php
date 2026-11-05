@@ -30,6 +30,7 @@ Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:lo
 Route::middleware(['auth:sanctum', 'usuario.ativo'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
+    Route::put('/me/credenciais', [AuthController::class, 'alterarCredenciais'])->middleware('throttle:5,1');
 
     // Liberado também para o usuário-vendedor (app da vendedora): consulta de
     // produto, clientes, pedidos e vendas (que o controller restringe às
