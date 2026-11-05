@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { Plus, Pencil, Trash2 } from '@lucide/vue'
-import { getUsuarios, getPerfis } from '@/services/configuracoesService'
+import { getUsuarios, getPerfis, createUsuario, updateUsuario, deleteUsuario } from '@/services/configuracoesService'
 import { useToastStore } from '@/stores/toast'
 import Card from '@/components/ui/Card.vue'
 import Table from '@/components/ui/Table.vue'
@@ -38,36 +38,48 @@ const columns = [
 
 const modalOpen = ref(false)
 const editingId = ref(null)
-const form = ref({ nome: '', email: '', cargo: '' })
+const form = ref({ nome: '', email: '', cargo: '', senha: '' })
 
 function openCreate() {
   editingId.value = null
-  form.value = { nome: '', email: '', cargo: perfis.value[0]?.nome ?? '' }
+  form.value = { nome: '', email: '', cargo: perfis.value[0]?.nome ?? '', senha: '' }
   modalOpen.value = true
 }
 
 function openEdit(usuario) {
   editingId.value = usuario.id
-  form.value = { nome: usuario.nome, email: usuario.email, cargo: usuario.cargo }
+  form.value = { nome: usuario.nome, email: usuario.email, cargo: usuario.cargo, senha: '' }
   modalOpen.value = true
 }
 
-function submit() {
+async function submit() {
   if (!form.value.nome || !form.value.email) return
-  if (editingId.value) {
-    const index = usuarios.value.findIndex((u) => u.id === editingId.value)
-    usuarios.value[index] = { ...usuarios.value[index], ...form.value }
-    toast.success('Usuário atualizado')
-  } else {
-    usuarios.value.unshift({ id: Date.now(), ...form.value, ultimoAcesso: new Date().toISOString(), status: 'ativo' })
-    toast.success('Usuário cadastrado', 'Um convite de acesso foi enviado por e-mail.')
+  if (!editingId.value && !form.value.senha) return
+  try {
+    if (editingId.value) {
+      const atualizado = await updateUsuario(editingId.value, form.value)
+      const index = usuarios.value.findIndex((u) => u.id === editingId.value)
+      usuarios.value[index] = { ...usuarios.value[index], ...atualizado }
+      toast.success('Usuário atualizado')
+    } else {
+      usuarios.value.unshift(await createUsuario(form.value))
+      toast.success('Usuário cadastrado')
+    }
+    modalOpen.value = false
+  } catch (e) {
+    toast.error('Não foi possível salvar', e.message)
   }
-  modalOpen.value = false
 }
 
-function remove(usuario) {
-  usuarios.value = usuarios.value.filter((u) => u.id !== usuario.id)
-  toast.info('Usuário removido')
+async function remove(usuario) {
+  if (!window.confirm(`Remover o usuário ${usuario.nome}?`)) return
+  try {
+    await deleteUsuario(usuario.id)
+    usuarios.value = usuarios.value.filter((u) => u.id !== usuario.id)
+    toast.info('Usuário removido')
+  } catch (e) {
+    toast.error('Não foi possível remover', e.message)
+  }
 }
 </script>
 
@@ -117,11 +129,12 @@ function remove(usuario) {
       <div class="space-y-4">
         <Input v-model="form.nome" label="Nome completo" required />
         <Input v-model="form.email" type="email" label="E-mail" required />
+        <Input v-model="form.senha" type="password" :label="editingId ? 'Nova senha (deixe em branco para manter)' : 'Senha (mín. 8 caracteres)'" :required="!editingId" />
         <Select v-model="form.cargo" label="Perfil de acesso" :options="perfis.map((p) => ({ value: p.nome, label: p.nome }))" />
       </div>
       <template #footer>
         <Button variant="ghost" @click="modalOpen = false">Cancelar</Button>
-        <Button @click="submit">{{ editingId ? 'Salvar' : 'Convidar usuário' }}</Button>
+        <Button @click="submit">{{ editingId ? 'Salvar' : 'Cadastrar usuário' }}</Button>
       </template>
     </Modal>
   </div>

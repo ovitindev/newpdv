@@ -26,15 +26,14 @@ class UsuarioController extends Controller
             'nome' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')],
             'cargo' => ['nullable', 'string', 'max:255'],
+            'senha' => ['required', 'string', 'min:8', 'max:100'],
         ]);
-
-        $senhaTemporaria = Str::random(10);
 
         $user = User::create([
             'empresa_id' => Auth::user()->empresa_id,
             'name' => $data['nome'],
             'email' => $data['email'],
-            'password' => Hash::make($senhaTemporaria),
+            'password' => Hash::make($data['senha']),
             'cargo' => $data['cargo'] ?? 'Operador de Caixa',
         ]);
 
@@ -52,6 +51,7 @@ class UsuarioController extends Controller
             'email' => ['sometimes', 'required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($usuario->id)],
             'cargo' => ['nullable', 'string', 'max:255'],
             'status' => ['nullable', 'in:ativo,inativo'],
+            'senha' => ['nullable', 'string', 'min:8', 'max:100'],
         ]);
 
         if (isset($data['nome'])) {
@@ -59,7 +59,18 @@ class UsuarioController extends Controller
             unset($data['nome']);
         }
 
+        $senha = $data['senha'] ?? null;
+        unset($data['senha']);
+        if ($senha) {
+            $data['password'] = $senha; // cast hashed
+        }
+
         $usuario->update($data);
+
+        // Senha trocada ou usuário inativado: derruba as sessões abertas.
+        if ($senha || ($data['status'] ?? 'ativo') !== 'ativo') {
+            $usuario->tokens()->delete();
+        }
 
         return $this->present($usuario);
     }
@@ -69,6 +80,7 @@ class UsuarioController extends Controller
         abort_unless($usuario->empresa_id === Auth::user()->empresa_id, 404);
         abort_if($usuario->id === Auth::id(), 422, 'Você não pode remover seu próprio usuário.');
 
+        $usuario->tokens()->delete();
         $usuario->delete();
 
         return response()->noContent();

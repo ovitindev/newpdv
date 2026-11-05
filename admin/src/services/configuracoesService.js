@@ -1,10 +1,22 @@
 import { http } from '@/services/http'
 import { mockRequest } from '@/utils/mockRequest'
-import { usuarios, perfis } from '@/data/mock/usuarios'
+import { perfis } from '@/data/mock/usuarios'
 import { certificadoA1, configFiscal } from '@/data/mock/empresa'
 
 export function getUsuarios() {
-  return mockRequest(usuarios)
+  return http.get("/usuarios")
+}
+
+export function createUsuario(payload) {
+  return http.post("/usuarios", payload)
+}
+
+export function updateUsuario(id, payload) {
+  return http.put(`/usuarios/${id}`, payload)
+}
+
+export function deleteUsuario(id) {
+  return http.delete(`/usuarios/${id}`)
 }
 
 export function getVendedores() {
