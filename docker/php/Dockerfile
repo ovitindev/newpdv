@@ -1,4 +1,4 @@
-FROM php:8.3-fpm
+FROM php:8.5-fpm
 
 # Dependências de sistema (libs pra gd, zip, soap/xml usados pelo NFePHP, etc)
 RUN apt-get update && apt-get install -y \

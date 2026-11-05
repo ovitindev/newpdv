@@ -10,7 +10,7 @@
 
 <p align="center">
   <img alt="Laravel" src="https://img.shields.io/badge/Laravel-13-FF2D20?logo=laravel&logoColor=white">
-  <img alt="PHP" src="https://img.shields.io/badge/PHP-8.3-777BB4?logo=php&logoColor=white">
+  <img alt="PHP" src="https://img.shields.io/badge/PHP-8.5-777BB4?logo=php&logoColor=white">
   <img alt="Vue" src="https://img.shields.io/badge/Vue-3-4FC08D?logo=vue.js&logoColor=white">
   <img alt="MariaDB" src="https://img.shields.io/badge/MariaDB-11-003545?logo=mariadb&logoColor=white">
   <img alt="Docker" src="https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white">
@@ -18,7 +18,7 @@
 
 ---
 
-- **Backend/API:** Laravel 13 (PHP 8.3)
+- **Backend/API:** Laravel 13 (PHP 8.5)
 - **Painel (frontend):** Vue 3 + Vite + Tailwind CSS (pasta `admin/`)
 - **Banco de dados:** MariaDB 11
 - **Cache/Fila/Sessão:** Redis
@@ -113,7 +113,7 @@ docker compose down -v       # para e APAGA os dados do banco (volume)
 
 ## Rodando sem Docker
 
-Pré-requisitos: PHP 8.3+, Composer, Node.js, e um MySQL/MariaDB rodando na sua máquina.
+Pré-requisitos: PHP 8.5+, Composer, Node.js, e um MySQL/MariaDB rodando na sua máquina.
 
 ```bash
 git clone https://github.com/ovitindev/newpdv.git
