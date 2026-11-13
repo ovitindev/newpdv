@@ -5,7 +5,7 @@
 <h3 align="center">NovaPDV</h3>
 
 <p align="center">
-  Sistema de PDV (ponto de venda) e gestão de loja: vendas, estoque, financeiro, fiscal (NFC-e/NF-e) e relatórios, multiempresa.
+  Sistema de PDV (ponto de venda) e gestão de loja: vendas, estoque, financeiro, fiscal (NFC-e/NF-e) e relatórios, multiempresa..
 </p>
 
 <p align="center">
